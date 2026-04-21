@@ -4,24 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=, initial-scale=1.0">
     <title>自動花園監測系統</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style2.css">
 </head>
 <body>
     
-    <header>
-         <span style="font-size: x-large;">
-        <h1>自動花園監測數值</h1> 
-     <nav>
+   <header>
+    <h1>自動花園監測數值</h1>
+    
     <ul>
-        <li><a href="動機.html" >動機</a></li>
-        <li><a href="首頁.html" >首頁</a></li>
-        <li><a href="訂閱.html" >訂閱</a></li>
-        <li><a href="製作名單.html" >製作名單</a></li>
-        
+        <li><a href="首頁.html">首頁</a></li>
+        <li><a href="動機.html">動機</a></li>
+        <li><a href="訂閱.html">訂閱</a></li>
+        <li><a href="製作名單.html">製作名單</a></li>
+        <li><a href="控制中心.html">控制中心</a></li>
     </ul>
-    </nav>
-    </span>                                       
-     </header> 
+    </header> 
       <section class="標題">        
         <h2></h2>
     </section>                          <!--導覽列 -->
@@ -29,11 +26,34 @@
             <p><!--請輸入文字 --></p>
         </section>
     <div class="container">
-        <div class="box">土壤濕度</div>
-        <div class="box">環境溫度</div>
-        <div class="box">環境濕度</div>
-        <div class="box">光照強度</div>
+        <div class="box">
+        <span class="label">土壤濕度</span>
+        <div class="value-display">
+            <span id="home-moisture">--.-</span>
+            <small>%</small></div>
         </div>
+    
+    <div class="box">
+        <span class="label">環境溫度</span>
+        <div class="value-display">
+            <span id="home-temp">--.-</span>
+            <small>°C</small></div>
+        </div>
+    
+    <div class="box">
+        <span class="label">環境濕度</span>
+        <div class="value-display">
+            <span id="home-humi">--.-</span>
+            <small>%</small></div>
+        </div>
+    
+    <div class="box">
+        <span class="label">光照強度</span>
+        <div class="value-display">
+            <span id="home-lux">--.-</span>
+            <small>lx</small></div>
+        </div>
+</div>
         
 </body>
 </html>
