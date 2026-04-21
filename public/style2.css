@@ -1,0 +1,280 @@
+* {
+    padding: 0;
+    margin: 0;
+    box-sizing: border-box; /* 防止 padding 撐開寬度 */
+}
+
+body {
+    /* 科技感深色背景 + 微弱網格 */
+    background: radial-gradient(circle at 50% 50%, #101828, #000000);
+    background-attachment: fixed;
+    color: #e2e8f0;
+    font-family: "JetBrains Mono", "Segoe UI", "Microsoft JhengHei", monospace;
+    line-height: 1.6;
+}
+
+/* 導覽列：不再使用 absolute */
+header {
+    height: 70px;
+    width: 100%;
+    position: fixed;
+    top: 0;
+    z-index: 1000;
+    display: flex;
+    /* 核心：這行會把 h1 推向最左，ul 推向最右 */
+    justify-content: space-between; 
+    align-items: center;
+    /* 左右留白 5%，讓文字不會貼死螢幕邊緣 */
+    padding: 0 5%; 
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(0, 255, 255, 0.2);
+}
+
+h1 {
+    font-size: 1.4rem;
+    letter-spacing: 2px;
+    color: #00ffff;
+    border-left: 4px solid #00ffff;
+    padding-left: 12px;
+    font-weight: 400;
+}
+
+header ul {
+   /* 強制清除可能殘留的定位 */
+    position: static !important; 
+    list-style: none;
+    display: flex; 
+    gap: 30px; 
+    margin: 0;
+    padding: 0;
+}
+
+header li {
+    display: block; /* 確保 li 遵循 flex 佈局 */
+}
+
+header a {
+    color: rgba(255, 255, 255, 0.7);
+    text-decoration: none;
+    font-size: 0.95rem; 
+    font-family: "JetBrains Mono", monospace;
+    transition: 0.3s;
+    letter-spacing: 1px;
+    white-space: nowrap; /* 防止文字在小螢幕換行 */
+}
+
+header a:hover {
+    color: #00ffff;
+    /* 加上一點點底部發光線，更俐落 */
+    border-bottom: 1px solid #00ffff;
+    text-shadow: 0 0 8px rgba(0, 255, 255, 0.5);
+}
+
+/* 數據卡片容器：關鍵響應式設定 */
+.container {
+    display: grid;
+    /* 自動計算：寬度夠就分兩欄，不夠（如手機）就自動縮減為一欄 */
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); 
+    gap: 25px;
+    padding: 100px 5% 40px 5%; /* 頂部 padding 避開 fixed header */
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+/* 卡片樣式：毛玻璃科技感 */
+.box {
+    min-height: 280px;
+    background: rgba(255, 255, 255, 0.03); 
+    border: 1px solid rgba(0, 255, 255, 0.15);
+    border-radius: 4px;
+    backdrop-filter: blur(8px);
+    display: flex;
+    flex-direction: column;         /* 讓標題在上，數值在下 */
+    justify-content: space-between; /* 撐開上下距離 */
+    transition: 0.3s ease;          /* 懸浮動畫 */
+    padding: 10px 25px 25px 25px;   /* 上 15px, 右 25px, 下 25px, 左 25px */
+}
+
+.box:hover {
+    border-color: #00ffff;
+    background: rgba(0, 255, 255, 0.05);
+    transform: translateY(-5px); /* 輕微懸浮感 */
+}
+
+/* 調整卡片內的文字顏色 */
+.box {
+    color: #00ffff;
+    font-size: 1.1rem;
+    letter-spacing: 1px;
+}
+
+/* 標題樣式 */
+.label {
+    font-size: 20px;
+    color: #00ffff;
+    opacity: 0.8;
+    letter-spacing: 2px;
+}
+
+/* 數值顯示樣式：首頁大數字更有張力 */
+.value-display {
+    font-size: 20px; /* 大數字 */
+    font-family: "JetBrains Mono", monospace;
+    color: #ffffff;
+    text-shadow: 0 0 15px rgba(0, 255, 255, 0.4);
+    text-align: right; /* 數值靠右對齊，增加設計感 */
+}
+
+.value-display small {
+    font-size: 1.2rem;
+    color: #00ffff;
+}
+
+/* 手機版微調 */
+@media (max-width: 768px) {
+    header {
+        padding: 0 15px;
+    }
+    h1 {
+        font-size: 1.1rem;
+    }
+    header ul {
+        gap: 15px; /* 手機上縮小間距 */
+    }
+    .container {
+        grid-template-columns: 1fr; /* 強制一欄 */
+        padding-top: 90px;
+    }
+    header a {
+        font-size: 0.85rem;
+    }
+}
+
+/*控制中心*/
+/* 控制元件容器 */
+.control-group {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    width: 100%;
+}
+
+/* 科技感開關 (Toggle Switch) */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 30px;
+}
+
+.switch input { opacity: 0; width: 0; height: 0; }
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(0, 255, 255, 0.3);
+    transition: .4s;
+    border-radius: 34px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 22px; width: 22px;
+    left: 4px; bottom: 3px;
+    background-color: #00ffff;
+    transition: .4s;
+    border-radius: 50%;
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.8);
+}
+
+input:checked + .slider { background-color: rgba(0, 255, 255, 0.2); }
+input:checked + .slider:before { transform: translateX(26px); }
+
+/* 科技感數值拉條 (Range Slider) */
+input[type=range] {
+    -webkit-appearance: none;
+    width: 100%;
+    background: rgba(255, 255, 255, 0.1);
+    height: 5px;
+    border-radius: 5px;
+}
+
+input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    height: 15px; width: 15px;
+    background: #00ffff;
+    cursor: pointer;
+    box-shadow: 0 0 10px #00ffff;
+    border-radius: 50%;
+}
+
+
+
+/* 製作名單專用的超大方框 */
+.credits-box {
+    width: 100%;
+    min-height: 60vh; /* 佔據螢幕高度的 60%，營造大空白感 */
+    background: rgba(255, 255, 255, 0.02); /* 極透明 */
+    border: 1px solid rgba(0, 255, 255, 0.1);
+    border-radius: 4px;
+    backdrop-filter: blur(10px);
+    
+    display: flex;
+    flex-direction: column;
+    justify-content: center; /* 文字居中 */
+    align-items: center;
+    
+    margin: 40px auto;
+    padding: 60px;
+    position: relative;
+    overflow: hidden;
+}
+
+/* 加上科技感的角落裝飾 */
+.credits-box::before {
+    content: "CREDITS // 01";
+    position: absolute;
+    top: 10px;
+    left: 15px;
+    font-size: 10px;
+    color: rgba(0, 255, 255, 0.4);
+    font-family: "JetBrains Mono", monospace;
+}
+
+.credits-box {
+    /* 保持原本的深色背景、邊框與掃描線樣式 */
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start; /* 從頂部開始排列 */
+    align-items: flex-start;     /* 靠左對齊，不再置中 */
+    padding: 60px 10%;           /* 左右留白 10%，營造大空白感 */
+    min-height: 500px;
+}
+
+.credits-title {
+    margin-bottom: 50px;         /* 標題與名單的間距 */
+    color: #00ffff;
+    letter-spacing: 10px;
+    font-size: 28px;
+    text-align: left;            /* 標題也靠左 */
+}
+
+/* 針對每一行名單的設定 */
+.credits-content p {
+    font-size: 25px;
+    color: #e2e8f0;
+    /* --- 核心修改：加大上下間距 --- */
+    margin-bottom: 30px;         /* 每一行之間的距離 */
+    line-height: 2;              /* 增加行內高度 */
+    /* -------------------------- */
+    letter-spacing: 2px;
+    font-family: "JetBrains Mono", monospace;
+    
+    /* 可選：加上左側裝飾短線，增加俐落感 */
+    border-left: 2px solid rgba(0, 255, 255, 0.3);
+    padding-left: 15px;
+}
