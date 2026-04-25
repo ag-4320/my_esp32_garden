@@ -2,58 +2,93 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>自動花園監測系統</title>
     <link rel="stylesheet" href="style2.css">
+    <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
     
-   <header>
-    <h1>自動花園監測數值</h1>
-    
-    <ul>
-        <li><a href="首頁.html">首頁</a></li>
-        <li><a href="動機.html">動機</a></li>
-        <li><a href="訂閱.html">訂閱</a></li>
-        <li><a href="製作名單.html">製作名單</a></li>
-        <li><a href="控制中心.html">控制中心</a></li>
-    </ul>
+    <header>
+        <h1>自動花園監測數值</h1>
+        
+        <ul>
+            <li><a href="首頁.html">首頁</a></li>
+            <li><a href="動機.html">動機</a></li>
+            <li><a href="訂閱.html">訂閱</a></li>
+            <li><a href="製作名單.html">製作名單</a></li>
+            <li><a href="控制中心.html">控制中心</a></li>
+        </ul>
     </header> 
-      <section class="標題">        
-        <h2></h2>
-    </section>                          <!--導覽列 -->
-        <section class="文字">
-            <p><!--請輸入文字 --></p>
-        </section>
+
+    <section class="標題">        
+        <h2 id="status">系統狀態：等待數據中...</h2>
+    </section>
+
+    <section class="文字">
+        <p>歡迎來到智慧花園監控系統，以下為即時環境參數：</p>
+    </section>
+
     <div class="container">
         <div class="box">
-        <span class="label">土壤濕度</span>
-        <div class="value-display">
-            <span id="home-moisture">--.-</span>
-            <small>%</small></div>
+            <span class="label">土壤濕度</span>
+            <div class="value-display">
+                <span id="home-moisture">--.-</span>
+                <small>%</small>
+            </div>
         </div>
     
-    <div class="box">
-        <span class="label">環境溫度</span>
-        <div class="value-display">
-            <span id="home-temp">--.-</span>
-            <small>°C</small></div>
+        <div class="box">
+            <span class="label">環境溫度</span>
+            <div class="value-display">
+                <span id="home-temp">--.-</span>
+                <small>°C</small>
+            </div>
         </div>
     
-    <div class="box">
-        <span class="label">環境濕度</span>
-        <div class="value-display">
-            <span id="home-humi">--.-</span>
-            <small>%</small></div>
+        <div class="box">
+            <span class="label">環境濕度</span>
+            <div class="value-display">
+                <span id="home-humi">--.-</span>
+                <small>%</small>
+            </div>
         </div>
     
-    <div class="box">
-        <span class="label">光照強度</span>
-        <div class="value-display">
-            <span id="home-lux">--.-</span>
-            <small>lx</small></div>
+        <div class="box">
+            <span class="label">光照強度</span>
+            <div class="value-display">
+                <span id="home-lux">--.-</span>
+                <small>lx</small>
+            </div>
         </div>
-</div>
-        
+    </div>
+
+    <script>
+        const socket = io();
+
+        socket.on('mqtt_data', (data) => {
+            try {
+                const json = JSON.parse(data);
+                
+                // 更新畫面上的數值 (對應 ESP32 的 JSON 欄位 t, h, soil, lux)
+                if(json.soil !== undefined) document.getElementById('home-moisture').innerText = json.soil;
+                if(json.temp !== undefined) document.getElementById('home-temp').innerText = json.temp;
+                if(json.hum !== undefined) document.getElementById('home-humi').innerText = json.hum;
+                if(json.lux !== undefined) document.getElementById('home-lux').innerText = json.lux;
+                
+                document.getElementById('status').innerText = "系統狀態：數據已更新 (" + new Date().toLocaleTimeString() + ")";
+            } catch (e) {
+                console.log("數據解析錯誤", e);
+            }
+        });
+
+        socket.on('connect', () => {
+            document.getElementById('status').innerText = "系統狀態：已連線至伺服器";
+        });
+
+        socket.on('disconnect', () => {
+            document.getElementById('status').innerText = "系統狀態：連線中斷...";
+        });
+    </script>
 </body>
 </html>
