@@ -3,58 +3,91 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>自動花園 - 監測首頁</title>
+    <title>自動花園監測系統 - 即時監控</title>
     <link rel="stylesheet" href="style2.css">
     <script src="/socket.io/socket.io.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        .box { height: auto; min-height: 260px; display: flex; flex-direction: column; align-items: center; padding: 20px; margin: 10px; border-radius: 12px; background: #fff; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        canvas { width: 100% !important; max-height: 140px; margin-bottom: 15px; }
-        .value-display { font-size: 1.8rem; font-weight: bold; color: #333; }
-        /* 低調加權格顏色 */
-        .box-total { background-color: #f8f9fa !important; border: 1px solid #dee2e6 !important; }
-        .box-total .label { color: #6c757d; font-weight: bold; }
+        /* 僅針對圖表顯示做必要微調，不影響你原本的 .box 佈局 */
+        canvas { 
+            width: 100% !important; 
+            max-height: 120px; /* 控制圖表高度，避免撐破你的 box */
+            margin-bottom: 10px;
+        }
+        .box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        /* 低調的加權格顏色，若不需要可刪除此段 */
+        .box-total { 
+            background-color: #f0f4f7 !important; 
+            border: 1px solid #d1d9e0 !important; 
+        }
     </style>
 </head>
 <body>
+    
     <header>
-        <h1>自動花園監測系統</h1>
+        <h1>自動花園監測數值</h1>
         <ul>
             <li><a href="首頁.html">首頁</a></li>
             <li><a href="動機.html">動機</a></li>
+            <li><a href="訂閱.html">訂閱</a></li>
+            <li><a href="製作名單.html">製作名單</a></li>
             <li><a href="控制中心.html">控制中心</a></li>
         </ul>
-    </header>
+    </header> 
 
-    <section class="標題">
-        <h2 id="status">正在連接感測器...</h2>
+    <section class="標題">        
+        <h2 id="status">系統連線中...</h2>
     </section>
 
-    <div class="container" style="display: flex; flex-wrap: wrap; justify-content: center;">
+    <div class="container">
         <div class="box">
-            <span class="label">土壤濕度 (%)</span>
+            <span class="label">土壤濕度趨勢</span>
             <canvas id="chart-soil"></canvas>
-            <div class="value-display" id="home-moisture">--</div>
+            <div class="value-display">
+                <span id="home-moisture">--.-</span>
+                <small>%</small>
+            </div>
         </div>
+    
         <div class="box">
-            <span class="label">環境溫度 (°C)</span>
+            <span class="label">環境溫度趨勢</span>
             <canvas id="chart-temp"></canvas>
-            <div class="value-display" id="home-temp">--</div>
+            <div class="value-display">
+                <span id="home-temp">--.-</span>
+                <small>°C</small>
+            </div>
         </div>
+    
         <div class="box">
-            <span class="label">環境濕度 (%)</span>
+            <span class="label">環境濕度趨勢</span>
             <canvas id="chart-humi"></canvas>
-            <div class="value-display" id="home-humi">--</div>
+            <div class="value-display">
+                <span id="home-humi">--.-</span>
+                <small>%</small>
+            </div>
         </div>
+    
         <div class="box">
-            <span class="label">光照強度 (lx)</span>
+            <span class="label">光照強度趨勢</span>
             <canvas id="chart-lux"></canvas>
-            <div class="value-display" id="home-lux">--</div>
+            <div class="value-display">
+                <span id="home-lux">--.-</span>
+                <small>lx</small>
+            </div>
         </div>
+
         <div class="box box-total">
-            <span class="label">加權總評判定</span>
+            <span class="label">加權判定得分</span>
             <canvas id="chart-total"></canvas>
-            <div class="value-display" id="home-total">--</div>
+            <div class="value-display">
+                <span id="home-total">--.-</span>
+                <small>Score</small>
+            </div>
         </div>
     </div>
 
@@ -62,14 +95,30 @@
         const socket = io();
         const MAX_POINTS = 500;
 
+        // 初始化圖表
         function initChart(id, label, color) {
-            return new Chart(document.getElementById(id), {
+            const ctx = document.getElementById(id).getContext('2d');
+            return new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: Array(MAX_POINTS).fill(''),
-                    datasets: [{ label: label, data: [], borderColor: color, borderWidth: 2, pointRadius: 0, fill: true, backgroundColor: color + '11', tension: 0.3 }]
+                    datasets: [{
+                        label: label,
+                        data: [],
+                        borderColor: color,
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        fill: true,
+                        backgroundColor: color + '11',
+                        tension: 0.3
+                    }]
                 },
-                options: { responsive: true, scales: { x: { display: false }, y: { beginAtZero: false } }, plugins: { legend: { display: false } } }
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { x: { display: false }, y: { beginAtZero: false } },
+                    plugins: { legend: { display: false } }
+                }
             });
         }
 
@@ -90,13 +139,30 @@
         socket.on('mqtt_data', (data) => {
             try {
                 const res = JSON.parse(data);
-                document.getElementById('status').innerText = "數據同步中: " + new Date().toLocaleTimeString();
-                if(res.soil !== undefined) { document.getElementById('home-moisture').innerText = res.soil; pushData(charts.soil, res.soil); }
-                if(res.temp !== undefined) { document.getElementById('home-temp').innerText = res.temp; pushData(charts.temp, res.temp); }
-                if(res.hum !== undefined) { document.getElementById('home-humi').innerText = res.hum; pushData(charts.humi, res.hum); }
-                if(res.lux !== undefined) { document.getElementById('home-lux').innerText = res.lux; pushData(charts.lux, res.lux); }
-                if(res.total !== undefined) { document.getElementById('home-total').innerText = parseFloat(res.total).toFixed(1); pushData(charts.total, res.total); }
-            } catch (e) { console.log(e); }
+                document.getElementById('status').innerText = "數據更新時間: " + new Date().toLocaleTimeString();
+                
+                // 更新數值與圖表
+                if(res.soil !== undefined) { 
+                    document.getElementById('home-moisture').innerText = res.soil; 
+                    pushData(charts.soil, res.soil); 
+                }
+                if(res.temp !== undefined) { 
+                    document.getElementById('home-temp').innerText = res.temp; 
+                    pushData(charts.temp, res.temp); 
+                }
+                if(res.hum !== undefined) { 
+                    document.getElementById('home-humi').innerText = res.hum; 
+                    pushData(charts.humi, res.hum); 
+                }
+                if(res.lux !== undefined) { 
+                    document.getElementById('home-lux').innerText = res.lux; 
+                    pushData(charts.lux, res.lux); 
+                }
+                if(res.total !== undefined) { 
+                    document.getElementById('home-total').innerText = parseFloat(res.total).toFixed(1); 
+                    pushData(charts.total, res.total); 
+                }
+            } catch (e) { console.error("解析失敗", e); }
         });
     </script>
 </body>
