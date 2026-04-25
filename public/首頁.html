@@ -8,10 +8,10 @@
     <script src="/socket.io/socket.io.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        /* 僅針對圖表顯示做必要微調，不影響你原本的 .box 佈局 */
+        /* 確保圖表不會撐破你原本 style2.css 的 box 佈局 */
         canvas { 
             width: 100% !important; 
-            max-height: 120px; /* 控制圖表高度，避免撐破你的 box */
+            max-height: 120px; 
             margin-bottom: 10px;
         }
         .box {
@@ -20,7 +20,7 @@
             align-items: center;
             justify-content: center;
         }
-        /* 低調的加權格顏色，若不需要可刪除此段 */
+        /* 低調加權格 */
         .box-total { 
             background-color: #f0f4f7 !important; 
             border: 1px solid #d1d9e0 !important; 
@@ -95,7 +95,6 @@
         const socket = io();
         const MAX_POINTS = 500;
 
-        // 初始化圖表
         function initChart(id, label, color) {
             const ctx = document.getElementById(id).getContext('2d');
             return new Chart(ctx, {
@@ -141,23 +140,28 @@
                 const res = JSON.parse(data);
                 document.getElementById('status').innerText = "數據更新時間: " + new Date().toLocaleTimeString();
                 
-                // 更新數值與圖表
+                // --- 這裡必須對應 ESP32 的 JSON Key ---
+                // 土壤
                 if(res.soil !== undefined) { 
                     document.getElementById('home-moisture').innerText = res.soil; 
                     pushData(charts.soil, res.soil); 
                 }
-                if(res.temp !== undefined) { 
-                    document.getElementById('home-temp').innerText = res.temp; 
-                    pushData(charts.temp, res.temp); 
+                // 溫度 (ESP32 是 res.t)
+                if(res.t !== undefined) { 
+                    document.getElementById('home-temp').innerText = res.t; 
+                    pushData(charts.temp, res.t); 
                 }
-                if(res.hum !== undefined) { 
-                    document.getElementById('home-humi').innerText = res.hum; 
-                    pushData(charts.humi, res.hum); 
+                // 濕度 (ESP32 是 res.h)
+                if(res.h !== undefined) { 
+                    document.getElementById('home-humi').innerText = res.h; 
+                    pushData(charts.humi, res.h); 
                 }
+                // 光照
                 if(res.lux !== undefined) { 
                     document.getElementById('home-lux').innerText = res.lux; 
                     pushData(charts.lux, res.lux); 
                 }
+                // 總分
                 if(res.total !== undefined) { 
                     document.getElementById('home-total').innerText = parseFloat(res.total).toFixed(1); 
                     pushData(charts.total, res.total); 
