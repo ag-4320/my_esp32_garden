@@ -10,16 +10,14 @@
 </head>
 <body>
     
-     <header>
-    <h1>自動花園監測數值</h1>
-    
-    <ul>
-        <li><a href="首頁.html">首頁</a></li>
-        <li><a href="動機.html">動機</a></li>
-        <li><a href="訂閱.html">訂閱</a></li>
-        <li><a href="製作名單.html">製作名單</a></li>
-        <li><a href="控制中心.html">控制中心</a></li>
-    </ul>
+    <header>
+        <h1>自動花園監測數值</h1>
+        <ul>
+            <li><a href="index.html">即時監控</a></li> <li><a href="動機.html">動機</a></li>
+            <li><a href="訂閱.html">訂閱</a></li>
+            <li><a href="製作名單.html">製作名單</a></li>
+            <li><a href="控制中心.html">控制中心</a></li>
+        </ul>
     </header> 
 
     <section class="標題">        
@@ -31,28 +29,54 @@
         <div class="box">環境溫度：<span id="temp">--</span> °C</div>
         <div class="box">環境濕度：<span id="humidity">--</span> %</div>
         <div class="box">光照強度：<span id="lux">--</span> lx</div>
+        <div class="box" style="background-color: #e3f2fd; border: 2px solid #2196f3;">
+            加權總判定：<span id="total-score">--</span>
+        </div>
     </div>
 
     <script>
         const socket = io();
 
-        // 監聽來自 Render 伺服器的數據
+        // 監聽來自伺服器的 mqtt_data 事件
         socket.on('mqtt_data', (data) => {
-            console.log("收到數據:", data);
-            document.getElementById('status').innerText = "數據更新時間: " + new Date().toLocaleTimeString();
+            console.log("收到原始數據:", data);
             
-            // 這裡假設你的 ESP32 傳來的是一串 JSON 字串，例如 {"soil": 60, "temp": 25, "hum": 70, "lux": 500}
-            // 如果你只傳一個單純的數字，可以直接更新其中一個
+            // 更新更新時間
+            document.getElementById('status').innerText = "最後更新: " + new Date().toLocaleTimeString();
+            
             try {
+                // 將收到的 JSON 字串轉成物件
                 const sensorData = JSON.parse(data);
-                if(sensorData.soil) document.getElementById('soil-moisture').innerText = sensorData.soil;
-                if(sensorData.temp) document.getElementById('temp').innerText = sensorData.temp;
-                if(sensorData.hum) document.getElementById('humidity').innerText = sensorData.hum;
-                if(sensorData.lux) document.getElementById('lux').innerText = sensorData.lux;
+                
+                // 根據 ESP32 程式碼中的欄位名稱進行更新
+                // 注意：這裡的欄位名必須跟 ESP32 doc["xxx"] 一模一樣
+                if (sensorData.soil !== undefined) {
+                    document.getElementById('soil-moisture').innerText = sensorData.soil;
+                }
+                if (sensorData.temp !== undefined) {
+                    document.getElementById('temp').innerText = sensorData.temp;
+                }
+                if (sensorData.hum !== undefined) {
+                    document.getElementById('humidity').innerText = sensorData.hum;
+                }
+                if (sensorData.lux !== undefined) {
+                    document.getElementById('lux').innerText = sensorData.lux;
+                }
+                if (sensorData.total !== undefined) {
+                    // 總分保留一位小數
+                    document.getElementById('total-score').innerText = parseFloat(sensorData.total).toFixed(1);
+                }
+
             } catch (e) {
-                // 如果傳來的是單一純文字/數字，就暫時顯示在第一個方塊
+                console.error("JSON 解析失敗，可能格式不正確:", e);
+                // 備用方案：如果不是 JSON，就顯示在第一個框
                 document.getElementById('soil-moisture').innerText = data;
             }
+        });
+
+        // 處理連線異常
+        socket.on('connect_error', () => {
+            document.getElementById('status').innerText = "伺服器連線失敗，重試中...";
         });
     </script>
 </body>
