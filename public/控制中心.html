@@ -2,46 +2,30 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=, initial-scale=1.0">
-    <title>自動花園監測系統</title>
+    <title>控制中心</title>
     <link rel="stylesheet" href="style2.css">
+    <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
-    
     <header>
-    <h1>控制中心</h1>
-    <ul>
-        <li><a href="首頁.html">首頁</a></li>
-        <li><a href="動機.html">動機</a></li>
-        <li><a href="訂閱.html">訂閱</a></li>
-        <li><a href="製作名單.html">製作名單</a></li>
-        <li><a href="控制中心.html">控制中心</a></li>
-    </ul>
+        <h1>遠端控制設備</h1>
+        <ul><li><a href="首頁.html">回首頁</a></li></ul>
     </header>
-     <!--導覽列 -->
-     <div class="container">
-    <div class="box">
-        <div class="card-header">抽水系統泵浦</div>
-        <div class="control-group">
-            <p>手動開關</p>
-            <label class="switch">
-                <input type="checkbox" id="pump-switch">
-                <span class="slider"></span>
-            </label>
-            <p id="pump-status">狀態: 待命</p>
+
+    <div class="container">
+        <div class="box">
+            <h3>手動水閥開關</h3>
+            <button onclick="ctl('on')" style="background: green; color: white; padding: 15px;">強制開啟</button>
+            <button onclick="ctl('off')" style="background: red; color: white; padding: 15px;">關閉水閥</button>
         </div>
     </div>
 
-    <div class="box">
-        <div class="card-header">請輸入文字</div>
-        <div class="control-group">
-            <p>亮度調節</p>
-            <input type="range" min="0" max="255" value="128" id="light-slider">
-            <p>數值: <span id="light-val">128</span> PWM</p>
-        </div>
-    </div>
-</div>
-    
-        
+    <script>
+        const socket = io();
+        function ctl(cmd) {
+            socket.emit('control_valve', cmd); // 修改處：將指令傳給 index.js
+            alert("指令已下達: " + cmd);
+        }
+    </script>
 </body>
 </html>
