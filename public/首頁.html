@@ -96,60 +96,72 @@
             password: 'Jason5238137'
         });
 
-// 1. 將筆數改為 200 (若每 3 秒一筆，可顯示 10 分鐘)
-const MAX_POINTS = 200; 
+        const MAX_POINTS = 200; 
 
-function initChart(id, label, color) {
-    const ctx = document.getElementById(id).getContext('2d');
-    return new Chart(ctx, {
-        type: 'line',
-        data: {
-            // 橫軸標籤佔位
-            labels: Array(MAX_POINTS).fill(''),
-            datasets: [{
-                label: label,
-                // 2. 重要：預填 200 個 null，讓圖表寬度一開始就撐開，不會縮在一起
-                data: Array(MAX_POINTS).fill(null), 
-                borderColor: color,
-                borderWidth: 2,
-                pointRadius: 0,
-                fill: true,
-                backgroundColor: color + '11',
-                tension: 0.3
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            // 3. 關閉動畫可以讓高頻率更新時，電腦比較不卡
-            animation: { duration: 0 },
-            scales: { 
-                x: { display: false }, 
-                y: { 
-                    beginAtZero: false, 
-                    ticks: { font: { size: 10 }, maxTicksLimit: 5 } 
-                } 
-            },
-            plugins: { legend: { display: false } }
-        }
-    });
-}
-
-        const charts = {
-            soil: initChart('chart-soil', '土壤', '#4caf50'),
-            temp: initChart('chart-temp', '溫度', '#ff9800'),
-            humi: initChart('chart-humi', '濕度', '#2196f3'),
-            lux: initChart('chart-lux', '光照', '#fbc02d'),
-            total: initChart('chart-total', '總分', '#90a4ae')
+        // --- 1. 從 LocalStorage 載入歷史數據 ---
+        let savedHistory = JSON.parse(localStorage.getItem('garden_history')) || {
+            soil: Array(MAX_POINTS).fill(null),
+            temp: Array(MAX_POINTS).fill(null),
+            humi: Array(MAX_POINTS).fill(null),
+            lux: Array(MAX_POINTS).fill(null),
+            total: Array(MAX_POINTS).fill(null)
         };
 
-        function pushData(chart, val) {
+        function initChart(id, label, color, type) {
+            const ctx = document.getElementById(id).getContext('2d');
+            return new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: Array(MAX_POINTS).fill(''),
+                    datasets: [{
+                        label: label,
+                        // --- 2. 使用載入的歷史數據初始化 ---
+                        data: savedHistory[type], 
+                        borderColor: color,
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        fill: true,
+                        backgroundColor: color + '11',
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: { duration: 0 },
+                    scales: { 
+                        x: { display: false }, 
+                        y: { 
+                            beginAtZero: false, 
+                            ticks: { font: { size: 10 }, maxTicksLimit: 5 } 
+                        } 
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        const charts = {
+            soil: initChart('chart-soil', '土壤', '#4caf50', 'soil'),
+            temp: initChart('chart-temp', '溫度', '#ff9800', 'temp'),
+            humi: initChart('chart-humi', '濕度', '#2196f3', 'humi'),
+            lux: initChart('chart-lux', '光照', '#fbc02d', 'lux'),
+            total: initChart('chart-total', '總分', '#90a4ae', 'total')
+        };
+
+        // --- 3. 修改後的資料推送函數 (包含儲存邏輯) ---
+        function pushData(chart, val, type) {
             if (val === null || val === undefined) return;
+            
             chart.data.datasets[0].data.push(val);
             if (chart.data.datasets[0].data.length > MAX_POINTS) {
                 chart.data.datasets[0].data.shift();
             }
             chart.update('none');
+
+            // 同步更新本地紀錄並存檔
+            savedHistory[type] = chart.data.datasets[0].data;
+            localStorage.setItem('garden_history', JSON.stringify(savedHistory));
         }
 
         client.on('connect', () => {
@@ -164,23 +176,23 @@ function initChart(id, label, color) {
                 
                 if(res.soil !== undefined && res.soil !== null) {
                     document.getElementById('home-moisture').innerText = res.soil;
-                    pushData(charts.soil, res.soil);
+                    pushData(charts.soil, res.soil, 'soil');
                 }
                 if(res.t !== undefined && res.t !== null) {
                     document.getElementById('home-temp').innerText = res.t;
-                    pushData(charts.temp, res.t);
+                    pushData(charts.temp, res.t, 'temp');
                 }
                 if(res.h !== undefined && res.h !== null) {
                     document.getElementById('home-humi').innerText = res.h;
-                    pushData(charts.humi, res.h);
+                    pushData(charts.humi, res.h, 'humi');
                 }
                 if(res.lux !== undefined && res.lux !== null) {
                     document.getElementById('home-lux').innerText = Math.round(res.lux);
-                    pushData(charts.lux, res.lux);
+                    pushData(charts.lux, res.lux, 'lux');
                 }
                 if(res.total !== undefined && res.total !== null) {
                     document.getElementById('home-total').innerText = parseFloat(res.total).toFixed(1);
-                    pushData(charts.total, res.total);
+                    pushData(charts.total, res.total, 'total');
                 }
             } catch (e) {
                 console.error("JSON 解析錯誤:", e);
