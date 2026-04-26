@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,7 +8,6 @@
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        /* 確保圖表不會撐破你原本 style2.css 的 box 佈局 */
         canvas { 
             width: 100% !important; 
             max-height: 120px; 
@@ -20,7 +19,6 @@
             align-items: center;
             justify-content: center;
         }
-        /* 低調加權格 */
         .box-total { 
             background-color: #f0f4f7 !important; 
             border: 1px solid #d1d9e0 !important; 
@@ -41,12 +39,12 @@
     </header> 
 
     <section class="標題">        
-        <h2 id="status">系統連線中...</h2>
+        <h2 id="status">正在建立雲端連線...</h2>
     </section>
 
     <div class="container">
         <div class="box">
-            <span class="label">土壤濕度趨勢</span>
+            <span class="label">土壤濕度</span>
             <canvas id="chart-soil"></canvas>
             <div class="value-display">
                 <span id="home-moisture">--.-</span>
@@ -55,7 +53,7 @@
         </div>
     
         <div class="box">
-            <span class="label">環境溫度趨勢</span>
+            <span class="label">環境溫度</span>
             <canvas id="chart-temp"></canvas>
             <div class="value-display">
                 <span id="home-temp">--.-</span>
@@ -64,7 +62,7 @@
         </div>
     
         <div class="box">
-            <span class="label">環境濕度趨勢</span>
+            <span class="label">環境濕度</span>
             <canvas id="chart-humi"></canvas>
             <div class="value-display">
                 <span id="home-humi">--.-</span>
@@ -73,7 +71,7 @@
         </div>
     
         <div class="box">
-            <span class="label">光照強度趨勢</span>
+            <span class="label">光照強度</span>
             <canvas id="chart-lux"></canvas>
             <div class="value-display">
                 <span id="home-lux">--.-</span>
@@ -82,7 +80,7 @@
         </div>
 
         <div class="box box-total">
-            <span class="label">加權判定得分</span>
+            <span class="label">加權結果</span>
             <canvas id="chart-total"></canvas>
             <div class="value-display">
                 <span id="home-total">--.-</span>
@@ -92,8 +90,13 @@
     </div>
 
     <script>
-        const socket = io();
-        const MAX_POINTS = 500;
+        // --- MQTT 連線設定 ---
+        const client = mqtt.connect('wss://f17a8164c5cb466da01ab155fdc041cf.s1.eu.hivemq.cloud:8884/mqtt', {
+            username: 'ag-4320',
+            password: 'Jason5238137'
+        });
+
+        const MAX_POINTS = 30; 
 
         function initChart(id, label, color) {
             const ctx = document.getElementById(id).getContext('2d');
@@ -115,7 +118,10 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    scales: { x: { display: false }, y: { beginAtZero: false } },
+                    scales: { 
+                        x: { display: false }, 
+                        y: { beginAtZero: false, ticks: { font: { size: 10 } } } 
+                    },
                     plugins: { legend: { display: false } }
                 }
             });
@@ -130,43 +136,51 @@
         };
 
         function pushData(chart, val) {
+            if (val === null || val === undefined) return;
             chart.data.datasets[0].data.push(val);
-            if (chart.data.datasets[0].data.length > MAX_POINTS) chart.data.datasets[0].data.shift();
+            if (chart.data.datasets[0].data.length > MAX_POINTS) {
+                chart.data.datasets[0].data.shift();
+            }
             chart.update('none');
         }
 
-        socket.on('mqtt_data', (data) => {
+        client.on('connect', () => {
+            document.getElementById('status').innerText = "雲端連線成功，等待數據中...";
+            client.subscribe('esp32/garden/all');
+        });
+
+        client.on('message', (topic, payload) => {
             try {
-                const res = JSON.parse(data);
-                document.getElementById('status').innerText = "數據更新時間: " + new Date().toLocaleTimeString();
+                const res = JSON.parse(payload.toString());
+                document.getElementById('status').innerText = "最後更新: " + new Date().toLocaleTimeString();
                 
-                // --- 這裡必須對應 ESP32 的 JSON Key ---
-                // 土壤
-                if(res.soil !== undefined) { 
-                    document.getElementById('home-moisture').innerText = res.soil; 
-                    pushData(charts.soil, res.soil); 
+                if(res.soil !== undefined && res.soil !== null) {
+                    document.getElementById('home-moisture').innerText = res.soil;
+                    pushData(charts.soil, res.soil);
                 }
-                // 溫度 (ESP32 是 res.t)
-                if(res.t !== undefined) { 
-                    document.getElementById('home-temp').innerText = res.t; 
-                    pushData(charts.temp, res.t); 
+                if(res.t !== undefined && res.t !== null) {
+                    document.getElementById('home-temp').innerText = res.t;
+                    pushData(charts.temp, res.t);
                 }
-                // 濕度 (ESP32 是 res.h)
-                if(res.h !== undefined) { 
-                    document.getElementById('home-humi').innerText = res.h; 
-                    pushData(charts.humi, res.h); 
+                if(res.h !== undefined && res.h !== null) {
+                    document.getElementById('home-humi').innerText = res.h;
+                    pushData(charts.humi, res.h);
                 }
-                // 光照
-                if(res.lux !== undefined) { 
-                    document.getElementById('home-lux').innerText = res.lux; 
-                    pushData(charts.lux, res.lux); 
+                if(res.lux !== undefined && res.lux !== null) {
+                    document.getElementById('home-lux').innerText = Math.round(res.lux);
+                    pushData(charts.lux, res.lux);
                 }
-                // 總分
-                if(res.total !== undefined) { 
-                    document.getElementById('home-total').innerText = parseFloat(res.total).toFixed(1); 
-                    pushData(charts.total, res.total); 
+                if(res.total !== undefined && res.total !== null) {
+                    document.getElementById('home-total').innerText = parseFloat(res.total).toFixed(1);
+                    pushData(charts.total, res.total);
                 }
-            } catch (e) { console.error("解析失敗", e); }
+            } catch (e) {
+                console.error("JSON 解析錯誤:", e);
+            }
+        });
+
+        client.on('error', (err) => {
+            document.getElementById('status').innerText = "連線失敗: " + err;
         });
     </script>
 </body>
