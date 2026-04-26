@@ -96,36 +96,44 @@
             password: 'Jason5238137'
         });
 
-        const MAX_POINTS = 30; 
+// 1. 將筆數改為 200 (若每 3 秒一筆，可顯示 10 分鐘)
+const MAX_POINTS = 200; 
 
-        function initChart(id, label, color) {
-            const ctx = document.getElementById(id).getContext('2d');
-            return new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: Array(MAX_POINTS).fill(''),
-                    datasets: [{
-                        label: label,
-                        data: [],
-                        borderColor: color,
-                        borderWidth: 2,
-                        pointRadius: 0,
-                        fill: true,
-                        backgroundColor: color + '11',
-                        tension: 0.3
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: { 
-                        x: { display: false }, 
-                        y: { beginAtZero: false, ticks: { font: { size: 10 } } } 
-                    },
-                    plugins: { legend: { display: false } }
-                }
-            });
+function initChart(id, label, color) {
+    const ctx = document.getElementById(id).getContext('2d');
+    return new Chart(ctx, {
+        type: 'line',
+        data: {
+            // 橫軸標籤佔位
+            labels: Array(MAX_POINTS).fill(''),
+            datasets: [{
+                label: label,
+                // 2. 重要：預填 200 個 null，讓圖表寬度一開始就撐開，不會縮在一起
+                data: Array(MAX_POINTS).fill(null), 
+                borderColor: color,
+                borderWidth: 2,
+                pointRadius: 0,
+                fill: true,
+                backgroundColor: color + '11',
+                tension: 0.3
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            // 3. 關閉動畫可以讓高頻率更新時，電腦比較不卡
+            animation: { duration: 0 },
+            scales: { 
+                x: { display: false }, 
+                y: { 
+                    beginAtZero: false, 
+                    ticks: { font: { size: 10 }, maxTicksLimit: 5 } 
+                } 
+            },
+            plugins: { legend: { display: false } }
         }
+    });
+}
 
         const charts = {
             soil: initChart('chart-soil', '土壤', '#4caf50'),
