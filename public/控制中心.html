@@ -132,20 +132,19 @@
     let isCoolingDown = false;
     let countdownTimer = null; 
 
-    // 初始化：讀取本地儲存
+    // 1. 強化的初始化邏輯
     window.onload = function() {
         const savedLogs = localStorage.getItem('garden_history');
-        if (savedLogs) {
-            historyLogs = JSON.parse(savedLogs);
-            renderTable();
+        try {
+            const parsed = savedLogs ? JSON.parse(savedLogs) : [];
+            historyLogs = Array.isArray(parsed) ? parsed : [];
+        } catch (e) {
+            historyLogs = [];
         }
+        renderTable();
     };
 
-    client.on('connect', () => {
-        console.log("MQTT 連線成功");
-        client.subscribe('esp32/garden/logs');
-        client.subscribe('esp32/garden/all');
-    });
+    client.on('connect', () => console.log("MQTT 連線成功"));
 
     client.on('message', (topic, message) => {
         lastDataTime = Date.now();
@@ -153,13 +152,13 @@
             try {
                 const data = JSON.parse(message.toString());
                 addLog(data);
-            } catch (e) {
-                console.error("日誌格式解析錯誤", e);
-            }
+            } catch (e) { console.error("MQTT 日誌解析出錯"); }
         }
     });
 
+    // 2. 穩定的新增邏輯
     function addLog(data) {
+        if (!Array.isArray(historyLogs)) historyLogs = []; // 二次防護
         historyLogs.unshift(data);
         if (historyLogs.length > 50) historyLogs.pop();
         localStorage.setItem('garden_history', JSON.stringify(historyLogs));
@@ -195,13 +194,9 @@
 
     function ctl(cmd) {
         const user = document.getElementById('userName').value.trim();
-        const secInput = document.getElementById('duration').value;
-        const sec = parseInt(secInput); // 強制轉成整數
+        const sec = parseInt(document.getElementById('duration').value) || 10;
 
-        if (cmd === 'on' && !user) { 
-            alert("請輸入操作員姓名！"); 
-            return; 
-        }
+        if (cmd === 'on' && !user) { alert("請輸入操作員姓名！"); return; }
 
         if (client.connected) {
             const nowTime = new Date().toLocaleTimeString('zh-TW', { hour12: false });
@@ -213,55 +208,49 @@
                 type: cmd === 'on' ? "manual" : "stop"
             };
 
-            // 1. 發送指令與紀錄
             client.publish('esp32/control', cmd);
             addLog(logEntry);
 
-            // 2. 更新網頁即時狀態
             if (cmd === 'on') {
                 isCoolingDown = true;
                 document.getElementById('onBtn').disabled = true;
                 document.getElementById('v-state').innerText = "開啟中";
                 document.getElementById('v-state').style.color = "#4caf50";
                 document.getElementById('v-source').innerText = "控制來源：" + user;
-                document.getElementById('action-status').innerText = "指令已發送";
-
+                
                 let count = sec;
                 document.getElementById('timer-left').innerText = count;
-                
                 if(countdownTimer) clearInterval(countdownTimer); 
                 countdownTimer = setInterval(() => {
                     count--;
                     document.getElementById('timer-left').innerText = Math.max(count, 0);
-                    if (count <= 0) {
-                        stopWatering();
-                    }
+                    if (count <= 0) stopWatering();
                 }, 1000);
             } else {
                 stopWatering();
                 document.getElementById('action-status').innerText = "已強制停止";
             }
         } else {
-            alert("MQTT 尚未連線，請檢查網路或稍後再試");
+            alert("MQTT 斷線中");
         }
     }
 
     function stopWatering() {
         if(countdownTimer) clearInterval(countdownTimer);
-        countdownTimer = null;
         isCoolingDown = false;
         document.getElementById('v-state').innerText = "關閉中";
         document.getElementById('v-state').style.color = "#f44336";
         document.getElementById('v-source').innerText = "控制來源：系統自動";
         document.getElementById('timer-left').innerText = "0";
-        document.getElementById('action-status').innerText = "準備就緒";
         updateClock();
     }
 
     function renderTable() {
+        const body = document.getElementById('log-body');
+        if (!Array.isArray(historyLogs)) return; // 確保不噴錯
+
         const start = (currentPage - 1) * 10;
         const displayData = historyLogs.slice(start, start + 10);
-        const body = document.getElementById('log-body');
         
         if (displayData.length === 0) {
             body.innerHTML = '<tr><td colspan="4">暫無操作紀錄</td></tr>';
