@@ -9,52 +9,120 @@
     <style>
         /* 徹底清除最上方間距與雜訊 */
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { background-color: #f4f7f9; font-family: "Microsoft JhengHei", sans-serif; padding-bottom: 50px; }
         
-        header { margin-bottom: 20px; } /* 讓導覽列跟下方內容保持乾淨距離 */
+        body { 
+            background-color: #f4f7f9; 
+            font-family: "Microsoft JhengHei", -apple-system, sans-serif; 
+            padding-bottom: 50px; 
+            color: #333;
+        }
+        
+        header { margin-bottom: 30px; } 
 
-        /* 格子佈局 */
-        .control-area { width: 100%; height: 160px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .box { background: white; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 280px; }
+        /* 規格化容器：對齊首頁間距 */
+        .container { 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            gap: 25px; 
+            padding: 0 25px; 
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* 規格化外框：毛玻璃質感與圓角 */
+        .box { 
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px); 
+            border-radius: 20px; 
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05); 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            min-height: 280px; 
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        .box:hover { transform: translateY(-5px); box-shadow: 0 15px 35px rgba(0, 0, 0, 0.08); }
         
+        /* 規格化標籤：首頁裝飾風格 */
+        .label { 
+            position: absolute; 
+            top: 20px; 
+            left: 20px; 
+            font-weight: 900; 
+            color: #444; 
+            font-size: 0.9rem; 
+            border-left: 5px solid #007bff; 
+            padding-left: 10px;
+            letter-spacing: 1px;
+        }
+
         /* 大時間風格 */
         .time-text {
-            font-size: 3.5rem; font-weight: 800; color: #007bff;
-            text-shadow: 0 0 15px rgba(0, 123, 255, 0.2);
-            font-family: 'Courier New', monospace;
+            font-size: 3.8rem; 
+            font-weight: 800; 
+            color: #007bff;
+            text-shadow: 0 5px 15px rgba(0, 123, 255, 0.15);
+            font-family: 'Consolas', monospace;
         }
 
         /* 改良連線標籤 */
-        .conn-badge { font-size: 0.75rem; padding: 4px 12px; border-radius: 20px; font-weight: bold; }
-        .status-online { background: #e3f2fd; color: #1976d2; border: 1px solid #90caf9; }
-        .status-offline { background: #ffebee; color: #d32f2f; border: 1px solid #ef9a9a; }
+        .conn-badge { font-size: 0.7rem; padding: 4px 10px; border-radius: 8px; font-weight: bold; margin-left: 8px; vertical-align: middle; }
+        .status-online { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+        .status-offline { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
 
+        /* 輸入框規格化 */
         input[type="number"], input[type="text"] {
-            padding: 8px; border: 2px solid #007bff; border-radius: 8px;
-            text-align: center; font-size: 1rem; font-weight: bold; margin: 5px;
+            padding: 10px; 
+            border: 2px solid #e2e8f0; 
+            border-radius: 12px;
+            text-align: center; 
+            font-size: 1rem; 
+            font-weight: bold; 
+            margin: 5px;
+            transition: 0.3s;
         }
+        input:focus { border-color: #007bff; outline: none; background: #fff; }
 
-        button { padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; transition: 0.3s; }
-        .btn-on { background-color: #4caf50; color: white; }
-        .btn-off { background-color: #f44336; color: white; margin-left: 10px; }
-        button:disabled { background-color: #ccc !important; cursor: not-allowed; opacity: 0.6; }
+        /* 按鈕規格化：對齊首頁發光感 */
+        button { 
+            padding: 12px 24px; 
+            border: none; 
+            border-radius: 12px; 
+            cursor: pointer; 
+            font-weight: bold; 
+            transition: 0.3s; 
+            font-size: 1rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .btn-on { background: linear-gradient(135deg, #4caf50, #45a049); color: white; }
+        .btn-off { background: linear-gradient(135deg, #f44336, #d32f2f); color: white; margin-left: 10px; }
+        button:hover { opacity: 0.9; transform: scale(1.05); }
+        button:active { transform: scale(0.95); }
+        button:disabled { background: #cbd5e1 !important; cursor: not-allowed; opacity: 0.6; transform: none; box-shadow: none; }
 
-        /* 護眼日誌表格 */
-        .log-box { grid-column: span 2; width: 100%; margin-top: 20px; padding: 25px; }
-        .table-container { width: 100%; border-radius: 12px; overflow: hidden; border: 1px solid #eee; }
-        table { width: 100%; border-collapse: collapse; background: #fff; }
-        th { background-color: #f8f9fa; color: #666; padding: 15px; border-bottom: 2px solid #eee; font-size: 0.9rem; }
-        td { padding: 12px; text-align: center; border-bottom: 1px solid #f9f9f9; color: #555; font-size: 0.9rem; }
+        /* 規格化日誌表格 */
+        .log-box { grid-column: span 2; width: 100%; margin-top: 15px; padding: 45px 25px 25px 25px; }
+        .table-container { width: 100%; border-radius: 15px; overflow: hidden; border: 1px solid #e2e8f0; background: rgba(255,255,255,0.5); }
+        table { width: 100%; border-collapse: collapse; }
+        th { background-color: #f8fafc; color: #64748b; padding: 16px; border-bottom: 2px solid #edf2f7; font-size: 0.85rem; text-transform: uppercase; }
+        td { padding: 14px; text-align: center; border-bottom: 1px solid #f1f5f9; color: #475569; font-size: 0.95rem; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover { background-color: rgba(248, 250, 252, 0.8); }
         
-        .badge { padding: 3px 10px; border-radius: 50px; color: white; font-size: 0.8rem; }
-        .bg-manual { background: #81c784; }
-        .bg-stop { background: #e57373; }
+        .badge { padding: 4px 12px; border-radius: 8px; color: white; font-size: 0.75rem; font-weight: bold; }
+        .bg-manual { background: #10b981; } /* 鮮艷綠 */
+        .bg-stop { background: #ef4444; }   /* 鮮艷紅 */
+
+        .value-display { position: absolute; bottom: 20px; font-size: 0.9rem; font-weight: bold; }
     </style>
 </head>
 <body>
     
     <header>
-        <h1>遠端控制設備</h1>
+        <h1>遠端控制中心</h1>
         <ul>
             <li><a href="首頁.html">首頁</a></li>
             <li><a href="動機.html">動機</a></li>
@@ -63,50 +131,51 @@
         </ul>
     </header> 
 
-    <div class="container" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding: 0 20px;">
+    <div class="container">
         <div class="box">
-            <span class="label">系統基準時間</span>
-            <div class="control-area"><div id="clock" class="time-text">00:00:00</div></div>
-            <div class="value-display"><span id="time-status" style="font-weight: bold;">讀取中...</span></div>
+            <span class="label">SYSTEM CLOCK</span>
+            <div class="control-area">
+                <div id="clock" class="time-text">00:00:00</div>
+            </div>
+            <div class="value-display"><span id="time-status">讀取中...</span></div>
         </div>
     
         <div class="box">
-            <span class="label">水閥手動控制</span>
+            <span class="label">MANUAL CONTROL</span>
             <div class="control-area">
-                <input type="text" id="userName" placeholder="請輸入姓名" maxlength="10">
-                <div style="margin-top:5px;">
-                    <input type="number" id="duration" value="10" min="1" max="60"> 秒
+                <input type="text" id="userName" placeholder="操作員姓名" maxlength="10">
+                <div style="margin-top:5px; color: #64748b; font-weight: bold;">
+                    設定秒數：<input type="number" id="duration" value="10" min="1" max="60" style="width: 70px;">
                 </div>
                 <div class="btn-group" style="margin-top:10px;">
                     <button id="onBtn" onclick="ctl('on')" class="btn-on">執行灑水</button>
                     <button id="offBtn" onclick="ctl('off')" class="btn-off">緊急停止</button>
                 </div>
             </div>
-            <div class="value-display"><span id="action-status">等待操作指令</span></div>
         </div>
 
         <div class="box">
-            <span class="label">水閥即時狀態 <span id="conn-tag" class="conn-badge status-offline">未連線</span></span>
+            <span class="label">DEVICE STATUS <span id="conn-tag" class="conn-badge status-offline">OFFLINE</span></span>
             <div class="control-area">
-                <div id="v-state" style="font-size: 1.6rem; font-weight: bold; color: #999;">等待操控</div>
-                <div id="v-source" style="font-size: 0.9rem; color: #888; margin-top: 8px;">控制來源：系統自動</div>
-                <div style="font-size: 2.2rem; color: #007bff; font-weight: bold; margin-top: 12px;"><span id="timer-left">0</span>s</div>
+                <div id="v-state" style="font-size: 1.8rem; font-weight: 900; color: #cbd5e1;">STANDBY</div>
+                <div id="v-source" style="font-size: 0.85rem; color: #94a3b8; margin-top: 8px;">來源：系統自動</div>
+                <div style="font-size: 2.5rem; color: #007bff; font-weight: 900; margin-top: 10px;"><span id="timer-left">0</span><span style="font-size: 1.2rem;">s</span></div>
             </div>
         </div>
 
         <div class="box log-box">
-            <span class="label">歷史操作日誌</span>
+            <span class="label">OPERATION LOGS</span>
             <div class="table-container">
                 <table>
                     <thead>
-                        <tr><th>執行時間</th><th>操作員</th><th>資訊</th><th>動作</th></tr>
+                        <tr><th>時間</th><th>操作員</th><th>詳情</th><th>狀態</th></tr>
                     </thead>
                     <tbody id="log-body"></tbody>
                 </table>
             </div>
-            <div style="margin-top:10px; display: flex; justify-content: space-between; width: 100%;">
-                <span id="page-info" style="font-size: 0.8rem; color: #999;">顯示最近 10 筆紀錄</span>
-                <button onclick="clearLogs()" style="font-size: 0.7rem; color: #bbb; background: none; border: 1px solid #eee; padding: 2px 8px; border-radius: 4px;">清空本機紀錄</button>
+            <div style="margin-top:15px; display: flex; justify-content: space-between; width: 100%; align-items: center;">
+                <span id="page-info" style="font-size: 0.8rem; color: #94a3b8; font-weight: bold;">顯示最新 10 筆操作紀錄</span>
+                <button onclick="clearLogs()" style="font-size: 0.7rem; color: #94a3b8; background: none; border: 1px solid #e2e8f0; padding: 4px 10px; box-shadow: none;">清除本地快取</button>
             </div>
         </div>
     </div>
@@ -131,7 +200,7 @@
 
         client.on('connect', () => {
             const tag = document.getElementById('conn-tag');
-            tag.innerText = "已連線";
+            tag.innerText = "ONLINE";
             tag.className = "conn-badge status-online";
             client.subscribe('esp32/garden/logs');
             renderTable(); 
@@ -141,13 +210,13 @@
             const user = document.getElementById('userName').value.trim();
             const sec = document.getElementById('duration').value;
 
-            if (!user) { alert("請務必輸入操作員姓名！"); return; }
+            if (!user) { alert("請輸入操作員姓名！"); return; }
 
             const nowTime = new Date().toLocaleTimeString('zh-TW', {hour12:false});
             let logEntry = {
                 time: nowTime,
                 user: user,
-                info: cmd === 'on' ? sec + " 秒" : "手動切斷",
+                info: cmd === 'on' ? sec + " 秒" : "強制停止",
                 status: cmd === 'on' ? "手動開啟" : "緊急停止",
                 type: cmd === 'on' ? "manual" : "stop"
             };
@@ -158,18 +227,17 @@
             if (cmd === 'on') {
                 isCoolingDown = true;
                 document.getElementById('onBtn').disabled = true;
-                document.getElementById('v-state').innerText = "開啟中";
-                document.getElementById('v-state').style.color = "#4caf50";
-                document.getElementById('v-source').innerText = "控制來源：" + user;
+                document.getElementById('v-state').innerText = "WATERING";
+                document.getElementById('v-state').style.color = "#10b981";
+                document.getElementById('v-source').innerText = "來源：" + user;
                 
                 let count = sec;
                 document.getElementById('timer-left').innerText = count;
+                if(countdownTimer) clearInterval(countdownTimer);
                 countdownTimer = setInterval(() => {
                     count--;
                     document.getElementById('timer-left').innerText = count;
-                    if (count <= 0) {
-                        stopCountdown();
-                    }
+                    if (count <= 0) stopCountdown();
                 }, 1000);
             } else {
                 stopCountdown();
@@ -180,10 +248,11 @@
         function stopCountdown() {
             if(countdownTimer) clearInterval(countdownTimer);
             isCoolingDown = false;
-            document.getElementById('v-state').innerText = "等待操控";
-            document.getElementById('v-state').style.color = "#999";
-            document.getElementById('v-source').innerText = "控制來源：系統自動";
+            document.getElementById('v-state').innerText = "STANDBY";
+            document.getElementById('v-state').style.color = "#cbd5e1";
+            document.getElementById('v-source').innerText = "來源：系統自動";
             document.getElementById('timer-left').innerText = "0";
+            document.getElementById('onBtn').disabled = false;
             updateClock();
         }
 
@@ -197,7 +266,7 @@
             body.innerHTML = historyLogs.slice(0, 10).map(log => `
                 <tr>
                     <td>${log.time}</td>
-                    <td style="font-weight:bold; color:#333;">${log.user}</td>
+                    <td style="font-weight:800; color:#1e293b;">${log.user}</td>
                     <td>${log.info}</td>
                     <td><span class="badge bg-${log.type}">${log.status}</span></td>
                 </tr>
@@ -217,8 +286,9 @@
             const isAllowed = (h >= 7 && h < 20);
             if (!isCoolingDown) {
                 document.getElementById('onBtn').disabled = !isAllowed;
-                document.getElementById('time-status').innerText = isAllowed ? "● 指令接收中" : "○ 非服務時段";
-                document.getElementById('time-status').style.color = isAllowed ? "#2e7d32" : "#c62828";
+                const ts = document.getElementById('time-status');
+                ts.innerText = isAllowed ? "● READY" : "○ SLEEP";
+                ts.style.color = isAllowed ? "#10b981" : "#ef4444";
             }
         }
 
