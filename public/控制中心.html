@@ -1,31 +1,121 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>控制中心</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>自動花園 - 控制中心</title>
     <link rel="stylesheet" href="style2.css">
-    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+    <style>
+        .container { display: flex; flex-wrap: wrap; gap: 20px; padding: 20px; justify-content: center; }
+        .box { min-width: 280px; padding: 25px; position: relative; }
+        .time-label { position: absolute; top: 10px; left: 15px; font-size: 0.8rem; color: #666; }
+        .time-display { font-size: 2.5rem; font-weight: bold; margin: 15px 0; color: #333; }
+        .status-text { font-size: 0.9rem; padding: 5px 10px; border-radius: 5px; }
+        .status-ok { background: #e8f5e9; color: #2e7d32; }
+        .status-no { background: #ffebee; color: #c62828; }
+        
+        input[type="number"] {
+            width: 60px; padding: 8px; margin: 10px; border: 1px solid #ddd; border-radius: 4px;
+        }
+        button {
+            padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; transition: 0.3s;
+        }
+        button:disabled { background: #ccc !important; cursor: not-allowed; }
+        .btn-on { background: #4caf50; color: white; }
+        .btn-off { background: #f44336; color: white; margin-left: 10px; }
+        
+        .lock-overlay { color: #f44336; font-weight: bold; margin-top: 10px; display: none; }
+    </style>
 </head>
 <body>
     <header>
         <h1>遠端控制設備</h1>
-        <ul><li><a href="首頁.html">回首頁</a></li></ul>
+        <ul>
+            <li><a href="首頁.html">回首頁</a></li>
+            <li><a href="控制中心.html">控制中心</a></li>
+        </ul>
     </header>
 
     <div class="container">
         <div class="box">
-            <h3>手動水閥開關</h3>
-            <button onclick="ctl('on')" style="background: green; color: white; padding: 15px;">強制開啟</button>
-            <button onclick="ctl('off')" style="background: red; color: white; padding: 15px;">關閉水閥</button>
+            <span class="time-label">現在時間</span>
+            <div id="clock" class="time-display">00:00:00</div>
+            <div id="receive-status" class="status-text">檢查時段中...</div>
+        </div>
+
+        <div class="box">
+            <h3>手動水閥控制</h3>
+            <div style="margin: 15px 0;">
+                <label>開啟時長:</label>
+                <input type="number" id="duration" value="10" min="1" max="60"> 秒
+            </div>
+            
+            <button id="onBtn" onclick="ctl('on')" class="btn-on">強制開啟</button>
+            <button id="offBtn" onclick="ctl('off')" class="btn-off">緊急關閉</button>
+            
+            <div id="lockMsg" class="lock-overlay">⚠️ 目前非控制時段 (07:00-20:00)</div>
         </div>
     </div>
 
     <script>
-        const socket = io();
-        function ctl(cmd) {
-            socket.emit('control_valve', cmd); // 修改處：將指令傳給 index.js
-            alert("指令已下達: " + cmd);
+        // --- MQTT 連線 ---
+        const client = mqtt.connect('wss://f17a8164c5cb466da01ab155fdc041cf.s1.eu.hivemq.cloud:8884/mqtt', {
+            username: 'ag-4320',
+            password: 'Jason5238137'
+        });
+
+        // --- 時間與權限控制邏輯 ---
+        function updateUI() {
+            const now = new Date();
+            const h = now.getHours();
+            const timeStr = now.toLocaleTimeString('zh-TW', { hour12: false });
+            document.getElementById('clock').innerText = timeStr;
+
+            // 定義時段：7點 到 20點
+            const isAllowed = (h >= 7 && h < 20);
+            const statusEl = document.getElementById('receive-status');
+            const onBtn = document.getElementById('onBtn');
+            const durationInput = document.getElementById('duration');
+            const lockMsg = document.getElementById('lockMsg');
+
+            if (isAllowed) {
+                statusEl.innerText = "● 接收指令中";
+                statusEl.className = "status-text status-ok";
+                onBtn.disabled = false;
+                durationInput.disabled = false;
+                lockMsg.style.display = "none";
+            } else {
+                statusEl.innerText = "○ 暫停接收指令";
+                statusEl.className = "status-text status-no";
+                onBtn.disabled = true;
+                durationInput.disabled = true;
+                lockMsg.style.display = "block";
+            }
         }
+
+        // --- 控制函數 ---
+        function ctl(cmd) {
+            if (client.connected) {
+                if (cmd === 'on') {
+                    const sec = document.getElementById('duration').value;
+                    // 送出 "on" 指令
+                    client.publish('esp32/control', 'on');
+                    alert("已下達開啟指令 (" + sec + "秒)");
+                } else {
+                    client.publish('esp32/control', 'off');
+                    alert("已下達關閉指令");
+                }
+            } else {
+                alert("錯誤：尚未連線至雲端伺服器");
+            }
+        }
+
+        // 每秒更新一次 UI
+        setInterval(updateUI, 1000);
+        updateUI();
+
+        client.on('connect', () => { console.log("MQTT Connected"); });
     </script>
 </body>
 </html>
