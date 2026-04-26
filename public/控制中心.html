@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="style2.css">
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
     <style>
-        /* --- 內部組件微調：維持原本格子形式，僅針對零件排版 --- */
+        /* --- 內部組件微調：維持原本格子形式 --- */
         .time-text {
             font-size: 3.5rem; 
             font-weight: 800;
@@ -30,7 +30,6 @@
         .btn-off { background-color: #f44336; color: white; }
         button:disabled { background-color: #ccc !important; opacity: 0.6; }
 
-        /* 表格格子專用樣式 (強制依照原本 log-box 形式) */
         .log-box { grid-column: span 2; width: 100%; justify-content: flex-start; padding-top: 50px; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; background: white; border-radius: 8px; overflow: hidden; }
         th, td { border: 1px solid #eee; padding: 12px; text-align: center; }
@@ -116,7 +115,7 @@
             <div class="page-ctrl">
                 <button onclick="changePage(-1)">上一頁</button>
                 <span id="page-info" style="font-weight: bold;">第 1 頁</span>
-                <button onclick="changePage(1)">下一頁</button>
+                <button onclick="changePage(1)">NEXT</button>
             </div>
         </div>
     </div>
@@ -130,6 +129,16 @@
         let currentPage = 1;
         let lastDataTime = 0;
         let isCoolingDown = false;
+        let countdownTimer = null; // 用於儲存計時器實例
+
+        // 當頁面加載時，從 localStorage 讀取紀錄
+        window.onload = function() {
+            const savedLogs = localStorage.getItem('garden_history');
+            if (savedLogs) {
+                historyLogs = JSON.parse(savedLogs);
+                renderTable();
+            }
+        };
 
         client.on('connect', () => {
             client.subscribe('esp32/garden/logs');
@@ -140,11 +149,17 @@
             lastDataTime = Date.now();
             if (topic === 'esp32/garden/logs') {
                 const data = JSON.parse(message.toString());
-                historyLogs.unshift(data);
-                if (historyLogs.length > 50) historyLogs.pop();
-                renderTable();
+                addLog(data);
             }
         });
+
+        // 統一處理新增日誌與本地儲存
+        function addLog(data) {
+            historyLogs.unshift(data);
+            if (historyLogs.length > 50) historyLogs.pop();
+            localStorage.setItem('garden_history', JSON.stringify(historyLogs));
+            renderTable();
+        }
 
         function updateClock() {
             const now = new Date();
@@ -159,9 +174,9 @@
             const timeStatus = document.getElementById('time-status');
 
             if (!isOnline) {
-                statusTag.innerText = "● 硬體離線 (未接收到數據)";
+                statusTag.innerText = "○ 硬體離線 (未接收到數據)";
                 statusTag.className = "status-tag offline";
-                timeStatus.innerText = "● 硬體離線";
+                timeStatus.innerText = "○ 硬體離線";
                 timeStatus.style.color = "#888";
                 onBtn.disabled = true;
             } else {
@@ -191,7 +206,8 @@
                 };
 
                 client.publish('esp32/control', cmd);
-                client.publish('esp32/garden/logs', JSON.stringify(logEntry));
+                // 這裡我們直接呼叫 addLog，確保本地端立刻看到紀錄
+                addLog(logEntry);
 
                 if (cmd === 'on') {
                     isCoolingDown = true;
@@ -202,22 +218,31 @@
                     
                     let count = sec;
                     document.getElementById('timer-left').innerText = count;
-                    const timer = setInterval(() => {
+                    
+                    if(countdownTimer) clearInterval(countdownTimer); // 清除舊的
+                    countdownTimer = setInterval(() => {
                         count--;
                         document.getElementById('timer-left').innerText = count;
                         if (count <= 0) {
-                            clearInterval(timer);
-                            isCoolingDown = false;
-                            document.getElementById('v-state').innerText = "關閉中";
-                            document.getElementById('v-state').style.color = "#f44336";
-                            document.getElementById('v-source').innerText = "控制來源：系統自動";
-                            updateClock();
+                            stopWatering();
                         }
                     }, 1000);
                 } else {
-                    location.reload(); 
+                    // 強制停止邏輯：不再重載頁面，而是重置狀態
+                    stopWatering();
+                    document.getElementById('action-status').innerText = "已強制停止";
                 }
             }
+        }
+
+        function stopWatering() {
+            if(countdownTimer) clearInterval(countdownTimer);
+            isCoolingDown = false;
+            document.getElementById('v-state').innerText = "關閉中";
+            document.getElementById('v-state').style.color = "#f44336";
+            document.getElementById('v-source').innerText = "控制來源：系統自動";
+            document.getElementById('timer-left').innerText = "0";
+            updateClock();
         }
 
         function renderTable() {
