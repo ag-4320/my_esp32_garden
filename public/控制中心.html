@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="style2.css">
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
     <style>
-        /* --- 針對格子內零件的微調 (不影響外框) --- */
+        /* --- 內部組件微調：維持原本格子形式，僅針對零件排版 --- */
         .time-text {
             font-size: 3.5rem; 
             font-weight: 800;
@@ -17,37 +17,30 @@
             margin: 10px 0;
         }
 
-        #input-ui {
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
+        #input-ui { margin-bottom: 15px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+        .input-row { display: flex; align-items: center; gap: 8px; font-weight: bold; }
+        
+        input[type="text"], input[type="number"] {
+            padding: 8px; border: 2px solid #007bff; border-radius: 8px; text-align: center; font-weight: bold;
         }
 
-        input[type="number"] {
-            width: 80px;
-            padding: 8px;
-            border: 2px solid #007bff;
-            border-radius: 8px;
-            text-align: center;
-            font-size: 1.2rem;
-            font-weight: bold;
-        }
-
-        .btn-group { display: flex; gap: 10px; }
-        button {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: bold;
-            transition: 0.3s;
-        }
+        .btn-group { display: flex; gap: 10px; margin-top: 10px; }
+        button { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s; }
         .btn-on { background-color: #4caf50; color: white; }
         .btn-off { background-color: #f44336; color: white; }
         button:disabled { background-color: #ccc !important; opacity: 0.6; }
 
-        .lock-msg { color: #f44336; font-size: 0.9rem; font-weight: bold; margin-top: 10px; }
+        /* 表格格子專用樣式 (強制依照原本 log-box 形式) */
+        .log-box { grid-column: span 2; width: 100%; justify-content: flex-start; padding-top: 50px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; background: white; border-radius: 8px; overflow: hidden; }
+        th, td { border: 1px solid #eee; padding: 12px; text-align: center; }
+        th { background-color: #007bff; color: white; }
+        
+        .badge { padding: 3px 8px; border-radius: 5px; color: white; font-size: 0.8rem; font-weight: bold; }
+        .bg-manual { background: #4caf50; }
+        .bg-stop { background: #f44336; }
+        
+        .page-ctrl { margin-top: 15px; display: flex; gap: 15px; align-items: center; }
         .status-tag { font-weight: 900; }
         .online { color: #2e7d32; }
         .offline { color: #c62828; }
@@ -63,13 +56,13 @@
                 <li><a href="動機.html">動機</a></li>
                 <li><a href="訂閱.html">訂閱</a></li>
                 <li><a href="製作名單.html">製作名單</a></li>
-                <li><a href="控制中心.html" style="color: #007bff; border-bottom: 2px solid #007bff;">控制中心</a></li>
+                <li><a href="控制中心.html">控制中心</a></li>
             </ul>
         </nav>
     </header> 
 
     <section class="標題">        
-        <h2 id="status" class="status-tag offline">● 等待硬體數據回傳...</h2>
+        <h2 id="status" class="status-tag offline">● 離線</h2>
     </section>
 
     <div class="container">
@@ -77,26 +70,53 @@
             <span class="label">現在時間</span>
             <div id="clock" class="time-text">00:00:00</div>
             <div class="value-display">
-                <span id="time-status" style="font-size: 1.1rem; font-weight: bold;">檢查中...</span>
+                <span id="time-status" style="font-weight: bold;">檢查中...</span>
             </div>
         </div>
     
         <div class="box">
             <span class="label">水閥控制開關</span>
             <div id="input-ui">
-                <span style="font-weight: bold; color: #555;">預計開啟:</span>
-                <input type="number" id="duration" value="10" min="0" max="60" 
-                       oninput="if(value>60)value=60;if(value<0)value=0"> 
-                <span style="font-weight: bold; color: #555;">秒</span>
+                <div class="input-row">
+                    <span>操作員:</span>
+                    <input type="text" id="userName" placeholder="姓名" maxlength="10" style="width: 120px;">
+                </div>
+                <div class="input-row">
+                    <span>開啟:</span>
+                    <input type="number" id="duration" value="10" min="1" max="60" style="width: 80px;"> 秒
+                </div>
             </div>
-            
             <div class="btn-group">
                 <button id="onBtn" onclick="ctl('on')" class="btn-on">強制開啟</button>
                 <button id="offBtn" onclick="ctl('off')" class="btn-off">緊急關閉</button>
             </div>
-            <div id="lockMsg" class="lock-msg" style="display:none;">⚠️ 非控制時段 (07-20)</div>
-            <div class="value-display" style="margin-top: 10px;">
-                <span id="action-status">準備就緒</span>
+            <div id="action-status" style="margin-top: 10px; font-size: 0.9rem; color: #666;">準備就緒</div>
+        </div>
+
+        <div class="box">
+            <span class="label">水閥即時狀況</span>
+            <div id="v-state" style="font-size: 2.5rem; font-weight: 900; color: #f44336;">關閉中</div>
+            <div id="v-source" style="font-size: 0.9rem; color: #888; margin-top: 5px;">控制來源：系統自動</div>
+            <div style="font-size: 3rem; color: #007bff; font-weight: 800; margin-top: 10px;"><span id="timer-left">0</span>s</div>
+        </div>
+
+        <div class="box log-box">
+            <span class="label">歷史操作日誌</span>
+            <table>
+                <thead>
+                    <tr>
+                        <th>執行時間</th>
+                        <th>操作者</th>
+                        <th>詳情</th>
+                        <th>最終狀態</th>
+                    </tr>
+                </thead>
+                <tbody id="log-body"></tbody>
+            </table>
+            <div class="page-ctrl">
+                <button onclick="changePage(-1)">上一頁</button>
+                <span id="page-info" style="font-weight: bold;">第 1 頁</span>
+                <button onclick="changePage(1)">下一頁</button>
             </div>
         </div>
     </div>
@@ -106,28 +126,24 @@
             username: 'ag-4320', password: 'Jason5238137'
         });
 
+        let historyLogs = []; 
+        let currentPage = 1;
         let lastDataTime = 0;
         let isCoolingDown = false;
 
-        // 判斷在線標準：有沒有收到資料
-        function checkConnection() {
-            const statusEl = document.getElementById('status');
-            const now = Date.now();
-            if (now - lastDataTime > 12000) {
-                statusEl.innerText = "● 硬體離線 (未接收到資料)";
-                statusEl.className = "status-tag offline";
-            } else {
-                statusEl.innerText = "● 硬體在線 (數據傳輸中)";
-                statusEl.className = "status-tag online";
-            }
-        }
-
         client.on('connect', () => {
-            client.subscribe('esp32/garden/all'); // 訂閱數據流
+            client.subscribe('esp32/garden/logs');
+            client.subscribe('esp32/garden/all');
         });
 
         client.on('message', (topic, message) => {
-            lastDataTime = Date.now(); // 只要有訊息進來就更新
+            lastDataTime = Date.now();
+            if (topic === 'esp32/garden/logs') {
+                const data = JSON.parse(message.toString());
+                historyLogs.unshift(data);
+                if (historyLogs.length > 50) historyLogs.pop();
+                renderTable();
+            }
         });
 
         function updateClock() {
@@ -138,56 +154,97 @@
             const isOnline = (Date.now() - lastDataTime < 12000);
             const isAllowed = (h >= 7 && h < 20);
             
+            const statusTag = document.getElementById('status');
             const onBtn = document.getElementById('onBtn');
             const timeStatus = document.getElementById('time-status');
-            const lockMsg = document.getElementById('lockMsg');
 
             if (!isOnline) {
-                timeStatus.innerText = "等待數據回傳...";
+                statusTag.innerText = "● 硬體離線 (未接收到數據)";
+                statusTag.className = "status-tag offline";
+                timeStatus.innerText = "等待硬體訊號...";
                 timeStatus.style.color = "#888";
-            } else if (isAllowed) {
-                timeStatus.innerText = "● 接收指令中";
-                timeStatus.style.color = "#2e7d32";
-                lockMsg.style.display = "none";
-                if (!isCoolingDown) onBtn.disabled = false;
-            } else {
-                timeStatus.innerText = "○ 暫停接收指令";
-                timeStatus.style.color = "#c62828";
-                lockMsg.style.display = "block";
                 onBtn.disabled = true;
+            } else {
+                statusTag.innerText = "● 硬體在線 (數據傳輸正常)";
+                statusTag.className = "status-tag online";
+                if (!isCoolingDown) {
+                    onBtn.disabled = !isAllowed;
+                    timeStatus.innerText = isAllowed ? "● 系統營運中" : "○ 非操作時段";
+                    timeStatus.style.color = isAllowed ? "#2e7d32" : "#c62828";
+                }
             }
         }
 
         function ctl(cmd) {
-            if (isCoolingDown && cmd === 'on') return;
+            const user = document.getElementById('userName').value.trim();
+            const sec = document.getElementById('duration').value;
+
+            if (!user && cmd === 'on') { alert("請輸入操作員姓名！"); return; }
 
             if (client.connected) {
+                const nowTime = new Date().toLocaleTimeString();
+                let logEntry = {
+                    time: nowTime, user: user || "系統",
+                    info: cmd === 'on' ? sec + " 秒" : "強制停機",
+                    status: cmd === 'on' ? "手動開啟" : "手動停止",
+                    type: cmd === 'on' ? "manual" : "stop"
+                };
+
                 client.publish('esp32/control', cmd);
-                const actionStatus = document.getElementById('action-status');
-                actionStatus.innerText = cmd === 'on' ? "指令已發送" : "已要求關閉";
+                client.publish('esp32/garden/logs', JSON.stringify(logEntry));
 
                 if (cmd === 'on') {
                     isCoolingDown = true;
                     document.getElementById('onBtn').disabled = true;
-                    let countdown = 5;
+                    document.getElementById('v-state').innerText = "開啟中";
+                    document.getElementById('v-state').style.color = "#4caf50";
+                    document.getElementById('v-source').innerText = "控制來源：" + user;
+                    
+                    let count = sec;
+                    document.getElementById('timer-left').innerText = count;
                     const timer = setInterval(() => {
-                        actionStatus.innerText = `冷卻中 (${countdown}s)`;
-                        countdown--;
-                        if (countdown < 0) {
+                        count--;
+                        document.getElementById('timer-left').innerText = count;
+                        if (count <= 0) {
                             clearInterval(timer);
                             isCoolingDown = false;
-                            actionStatus.innerText = "準備就緒";
+                            document.getElementById('v-state').innerText = "關閉中";
+                            document.getElementById('v-state').style.color = "#f44336";
+                            document.getElementById('v-source').innerText = "控制來源：系統自動";
                             updateClock();
                         }
                     }, 1000);
+                } else {
+                    location.reload(); 
                 }
-            } else {
-                alert("尚未連線至伺服器");
             }
         }
 
+        function renderTable() {
+            const start = (currentPage - 1) * 10;
+            const displayData = historyLogs.slice(start, start + 10);
+            const body = document.getElementById('log-body');
+            body.innerHTML = displayData.map(log => `
+                <tr>
+                    <td>${log.time}</td>
+                    <td>${log.user}</td>
+                    <td>${log.info}</td>
+                    <td><span class="badge bg-${log.type}">${log.status}</span></td>
+                </tr>
+            `).join('');
+            document.getElementById('page-info').innerText = `第 ${currentPage} 頁`;
+        }
+
+        function changePage(dir) {
+            const maxPage = Math.ceil(historyLogs.length / 10) || 1;
+            currentPage += dir;
+            if (currentPage < 1) currentPage = 1;
+            if (currentPage > maxPage) currentPage = maxPage;
+            renderTable();
+        }
+
         setInterval(updateClock, 1000);
-        setInterval(checkConnection, 3000);
+        updateClock();
     </script>
 </body>
 </html>
