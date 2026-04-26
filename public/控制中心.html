@@ -7,98 +7,81 @@
     <link rel="stylesheet" href="style2.css">
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
     <style>
-        /* --- 基礎佈局與首頁風格對齊 --- */
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { background-color: #f4f7f9; font-family: "Microsoft JhengHei", sans-serif; padding-bottom: 50px; }
-
-        header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px 40px;
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            box-shadow: 0 2px 15px rgba(0,0,0,0.05);
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-        }
-        header h1 { font-size: 1.5rem; color: #0c0a7d; font-weight: 900; }
-        header ul { display: flex; list-style: none; gap: 20px; }
-        header ul li a { text-decoration: none; color: #555; font-weight: bold; transition: 0.3s; }
-        header ul li a:hover { color: #007bff; }
-        header ul li a.active { color: #007bff; border-bottom: 2px solid #007bff; }
-
-        /* --- 內容佈局 --- */
-        .標題 { text-align: center; padding: 40px 20px 20px 20px; }
-        #status { font-size: 1.1rem; color: #64748b; font-weight: bold; }
-
-        .container { 
-            display: grid; 
-            grid-template-columns: 1fr 1fr; 
-            gap: 20px; 
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 20px;
-        }
-
-        .box { 
-            background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(10px); 
-            border-radius: 20px; 
-            border: 1px solid rgba(255, 255, 255, 0.4);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05); 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            justify-content: center; 
-            min-height: 280px; 
-            padding: 25px;
-            position: relative;
-        }
-
-        .label { 
-            position: absolute; 
-            top: 20px; 
-            left: 20px; 
-            font-weight: 900; 
-            color: #444; 
-            font-size: 0.9rem; 
-            border-left: 5px solid #007bff; 
-            padding-left: 10px;
-        }
-
+        /* 只針對控制中心特有的元件做微調，其餘全部交給 style2.css */
+        
+        /* 1. 大時間文字：保留原本的粗體與字體，但顏色與陰影對齊首頁風格 */
         .time-text {
             font-size: 3.5rem; 
-            font-weight: 800; 
-            color: #007bff;
-            text-shadow: 0 0 15px rgba(0, 123, 255, 0.3);
-            font-family: 'Courier New', Courier, monospace;
+            font-weight: 900; 
+            color: #0c0a7d; /* 對齊首頁標題的深藍色 */
+            font-family: 'Consolas', 'Courier New', monospace;
+            margin: 15px 0;
         }
 
-        /* 狀態標籤顏色 */
-        .online-tag { color: #2e7d32; }
-        .offline-tag { color: #c62828; }
+        /* 2. 控制 UI 排版 */
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            width: 100%;
+        }
+        
+        .input-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: bold;
+            color: #444;
+        }
 
-        /* 控制組件 */
-        #input-ui { display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; }
-        .input-row { display: flex; align-items: center; gap: 8px; font-weight: bold; }
-        input { padding: 8px; border: 2px solid #007bff; border-radius: 8px; text-align: center; }
+        input {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            text-align: center;
+            background: rgba(255, 255, 255, 0.5);
+        }
 
-        .btn-group { margin-top: 10px; }
-        button { padding: 12px 24px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        /* 3. 按鈕風格：沿用首頁的圓角邏輯 */
+        .btn-group { margin-top: 10px; display: flex; gap: 10px; }
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
         .btn-on { background-color: #4caf50; color: white; }
-        .btn-off { background-color: #f44336; color: white; margin-left: 10px; }
-        button:disabled { background-color: #ccc; cursor: not-allowed; }
+        .btn-off { background-color: #f44336; color: white; }
+        button:hover { opacity: 0.8; transform: translateY(-2px); }
+        button:disabled { background-color: #ccc; transform: none; }
 
-        /* 表格樣式 */
-        .log-box { grid-column: span 2; width: 100%; margin-top: 10px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 25px; background: white; }
-        th, td { border: 1px solid #eee; padding: 12px; text-align: center; }
-        th { background-color: #007bff; color: white; }
-        .badge { padding: 3px 8px; border-radius: 5px; color: white; font-size: 0.8rem; font-weight: bold; }
-        .bg-manual { background: #4caf50; }
-        .bg-stop { background: #f44336; }
+        /* 4. 日誌表格：確保不破壞 box 的形狀 */
+        .log-box { 
+            grid-column: span 2; 
+            width: 100%;
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            font-size: 0.9rem;
+        }
+        th { border-bottom: 2px solid #0c0a7d; padding: 10px; color: #0c0a7d; }
+        td { padding: 10px; border-bottom: 1px solid #eee; text-align: center; }
+
+        /* 5. 狀態標籤 */
+        .status-tag {
+            font-weight: 900;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 1.1rem;
+        }
+        .online { color: #2e7d32; }
+        .offline { color: #c62828; }
     </style>
 </head>
 <body>
@@ -117,39 +100,53 @@
     </header> 
 
     <section class="標題">        
-        <h2 id="status" class="offline-tag">硬體離線中 (等待數據傳輸...)</h2>
+        <h2 id="status" class="status-tag offline">● 等待硬體數據回傳...</h2>
     </section>
 
     <div class="container">
+        
         <div class="box">
             <span class="label">系統計時器</span>
             <div id="clock" class="time-text">00:00:00</div>
-            <div style="margin-top: 15px;"><span id="time-status" style="font-weight: bold;">檢查系統時區...</span></div>
+            <div id="time-status" style="font-weight: bold; color: #666;">同步時區中...</div>
         </div>
     
         <div class="box">
             <span class="label">人工遠端操作</span>
-            <div id="input-ui">
-                <div class="input-row"><span>操作員:</span><input type="text" id="userName" placeholder="請輸入姓名"></div>
-                <div class="input-row"><span>時長:</span><input type="number" id="duration" value="10"> 秒</div>
-            </div>
-            <div class="btn-group">
-                <button id="onBtn" onclick="ctl('on')" class="btn-on">執行指令</button>
-                <button id="offBtn" onclick="ctl('off')" class="btn-off">強制終止</button>
+            <div class="control-group">
+                <div class="input-row">
+                    <span>操作員</span>
+                    <input type="text" id="userName" placeholder="姓名" style="width: 120px;">
+                </div>
+                <div class="input-row">
+                    <span>秒數</span>
+                    <input type="number" id="duration" value="10" style="width: 70px;">
+                </div>
+                <div class="btn-group">
+                    <button id="onBtn" onclick="ctl('on')" class="btn-on">執行指令</button>
+                    <button id="offBtn" onclick="ctl('off')" class="btn-off">強制終止</button>
+                </div>
             </div>
         </div>
 
         <div class="box">
-            <span class="label">水閥即時回傳</span>
-            <div id="v-state" style="font-size: 2rem; font-weight: 900; color: #94a3b8;">等待心跳信號</div>
+            <span class="label">水閥即時狀態</span>
+            <div id="v-state" style="font-size: 2.5rem; font-weight: 900; color: #0c0a7d;">待命</div>
             <div id="v-source" style="font-size: 0.9rem; color: #888; margin-top: 5px;">控制來源：--</div>
-            <div style="font-size: 2.5rem; color: #007bff; font-weight: 800; margin-top: 10px;"><span id="timer-left">0</span>s</div>
+            <div style="font-size: 3rem; color: #007bff; font-weight: 900;"><span id="timer-left">0</span>s</div>
         </div>
 
         <div class="box log-box">
-            <span class="label">操作日誌回溯</span>
+            <span class="label">歷史操作日誌</span>
             <table>
-                <thead><tr><th>執行時間</th><th>操作者</th><th>詳情</th><th>最終狀態</th></tr></thead>
+                <thead>
+                    <tr>
+                        <th>時間</th>
+                        <th>操作者</th>
+                        <th>詳情</th>
+                        <th>狀態</th>
+                    </tr>
+                </thead>
                 <tbody id="log-body"></tbody>
             </table>
         </div>
@@ -160,59 +157,91 @@
             username: 'ag-4320', password: 'Jason5238137'
         });
 
-        let lastDataTime = 0; // 上次收到資料的時間戳
+        let lastHeartbeat = 0;
         let historyLogs = [];
 
-        // --- 智慧判斷邏輯 ---
-        function checkOnlineStatus() {
-            const now = Date.now();
+        // 監控在線狀態：以是否有收過數據（Heartbeat）為準
+        function monitorConnection() {
             const statusEl = document.getElementById('status');
-            
-            // 如果超過 10 秒沒收到 MQTT 資料，判定為離線
-            if (now - lastDataTime > 10000) {
-                statusEl.innerText = "● 硬體已離線 (無數據傳輸)";
-                statusEl.className = "offline-tag";
-                document.getElementById('v-state').innerText = "連線超時";
-                document.getElementById('v-state').style.color = "#94a3b8";
+            const now = Date.now();
+            if (now - lastHeartbeat > 12000) { // 超過 12 秒沒數據視為離線
+                statusEl.innerText = "● 硬體離線 (未接收數據)";
+                statusEl.className = "status-tag offline";
             } else {
-                statusEl.innerText = "● 硬體在線 (數據傳輸正常)";
-                statusEl.className = "online-tag";
+                statusEl.innerText = "● 硬體在線 (通訊正常)";
+                statusEl.className = "status-tag online";
             }
         }
 
         client.on('connect', () => {
-            console.log("MQTT Server Connected");
-            client.subscribe('esp32/garden/all'); // 訂閱感測器數據主題以判斷在線
+            client.subscribe('esp32/garden/all');
             client.subscribe('esp32/garden/logs');
         });
 
         client.on('message', (topic, message) => {
-            lastDataTime = Date.now(); // 只要有任何訊息進來，更新時間戳
-
+            lastHeartbeat = Date.now(); // 只要有訊息進來，就更新在線計時
+            
             if (topic === 'esp32/garden/logs') {
                 const data = JSON.parse(message.toString());
                 historyLogs.unshift(data);
                 renderTable();
-            }
-            
-            // 如果收到感測器匯總訊息，代表硬體真的在說話
-            if (topic === 'esp32/garden/all') {
-                updateClock(); // 順便更新狀態文字
             }
         });
 
         function updateClock() {
             const now = new Date();
             document.getElementById('clock').innerText = now.toLocaleTimeString('zh-TW', { hour12: false });
-            
-            const isOnline = (Date.now() - lastDataTime < 10000);
+            const isOnline = (Date.now() - lastHeartbeat < 12000);
             const h = now.getHours();
             const isWorkingHour = (h >= 7 && h < 20);
 
             const timeStatusEl = document.getElementById('time-status');
             if (!isOnline) {
-                timeStatusEl.innerText = "等待硬體訊號...";
-                timeStatusEl.style.color = "#94a3b8";
+                timeStatusEl.innerText = "等待硬體信號...";
             } else {
                 timeStatusEl.innerText = isWorkingHour ? "● 系統營運中" : "○ 非營運時間";
-                timeStatusEl.style.color = isWorkingHour ?
+                timeStatusEl.style.color = isWorkingHour ? "#2e7d32" : "#c62828";
+            }
+        }
+
+        function ctl(cmd) {
+            const user = document.getElementById('userName').value.trim();
+            const sec = document.getElementById('duration').value;
+            if (!user && cmd === 'on') { alert("請輸入操作員姓名！"); return; }
+
+            if (client.connected) {
+                const logEntry = {
+                    time: new Date().toLocaleTimeString(),
+                    user: user || "系統",
+                    info: cmd === 'on' ? sec + " 秒" : "強制停止",
+                    status: cmd === 'on' ? "手動開啟" : "手動關閉",
+                    type: cmd === 'on' ? "manual" : "stop"
+                };
+                client.publish('esp32/control', cmd);
+                client.publish('esp32/garden/logs', JSON.stringify(logEntry));
+                if(cmd === 'on') {
+                    document.getElementById('v-state').innerText = "開啟中";
+                    document.getElementById('v-source').innerText = "操作員：" + user;
+                } else {
+                    location.reload();
+                }
+            }
+        }
+
+        function renderTable() {
+            const body = document.getElementById('log-body');
+            body.innerHTML = historyLogs.slice(0, 8).map(log => `
+                <tr>
+                    <td>${log.time}</td>
+                    <td>${log.user}</td>
+                    <td>${log.info}</td>
+                    <td>${log.status}</td>
+                </tr>
+            `).join('');
+        }
+
+        setInterval(updateClock, 1000);
+        setInterval(monitorConnection, 3000);
+    </script>
+</body>
+</html>
