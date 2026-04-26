@@ -7,7 +7,6 @@
     <link rel="stylesheet" href="style2.css">
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
     <style>
-        /* 統一格子佈局，增加高度以容納大時間 */
         .control-area {
             width: 100%;
             height: 160px; 
@@ -21,10 +20,10 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            min-height: 280px; /* 增加格子基礎高度 */
+            min-height: 280px;
         }
 
-        /* --- 時間顯示：加大、亮藍色、發光 --- */
+        /* 時間顯示樣式 */
         .time-text {
             font-size: 3.5rem; 
             font-weight: 800;
@@ -34,54 +33,29 @@
             margin: 10px 0;
         }
 
-        /* --- 輸入區域排版分離 --- */
-        #input-ui {
-            margin-bottom: 20px; /* 推開下方的按鈕群 */
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
+        /* 連線標籤與狀態點 */
+        .online-tag { font-size: 0.8rem; padding: 2px 8px; border-radius: 12px; margin-left: 8px; }
+        .tag-on { background: #e8f5e9; color: #2e7d32; border: 1px solid #2e7d32; }
+        .tag-off { background: #ffebee; color: #c62828; border: 1px solid #c62828; }
+        .dot { height: 10px; width: 10px; border-radius: 50%; display: inline-block; margin-right: 8px; }
+        .dot-online { background-color: #4caf50; box-shadow: 0 0 8px #4caf50; }
+        .dot-offline { background-color: #f44336; }
 
+        /* 輸入區域 */
+        #input-ui { margin-bottom: 20px; display: flex; align-items: center; gap: 12px; }
         input[type="number"] {
-            width: 70px;
-            padding: 8px;
-            border: 2px solid #007bff;
-            border-radius: 8px;
-            text-align: center;
-            font-size: 1.2rem;
-            font-weight: bold;
+            width: 70px; padding: 8px; border: 2px solid #007bff;
+            border-radius: 8px; text-align: center; font-size: 1.2rem; font-weight: bold;
         }
 
-        /* 隱藏輸入框微調箭頭 */
-        input::-webkit-outer-spin-button,
-        input::-webkit-inner-spin-button {
-            -webkit-appearance: none;
-            margin: 0;
-        }
-
-        .btn-group {
-            margin-top: 5px;
-        }
-        
-        button {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-weight: bold;
-            transition: 0.3s;
-            font-size: 1rem;
-        }
+        button { padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; transition: 0.3s; font-size: 1rem; }
         .btn-on { background-color: #4caf50; color: white; }
         .btn-off { background-color: #f44336; color: white; margin-left: 10px; }
         button:disabled { background-color: #ccc !important; cursor: not-allowed; opacity: 0.6; }
 
-        .lock-msg {
-            color: #f44336;
-            font-size: 0.9rem;
-            font-weight: bold;
-            margin-top: 10px;
-        }
+        .status-val { font-size: 1.6rem; font-weight: bold; margin-bottom: 10px; }
+        .val-on { color: #4caf50; }
+        .val-off { color: #f44336; }
     </style>
 </head>
 <body>
@@ -98,7 +72,7 @@
     </header> 
 
     <section class="標題">        
-        <h2 id="status">正在建立雲端連線...</h2>
+        <h2 id="status">正在嘗試連線雲端伺服器...</h2>
     </section>
 
     <div class="container">
@@ -108,29 +82,43 @@
                 <div id="clock" class="time-text">00:00:00</div>
             </div>
             <div class="value-display">
-                <span id="time-status" style="font-size: 1.1rem; font-weight: bold;">檢查中...</span>
+                <span id="time-status" style="font-size: 1.1rem; font-weight: bold;">時段檢查中...</span>
             </div>
         </div>
     
         <div class="box">
-            <span class="label">水閥控制開關</span>
+            <span class="label">水閥遠端控制</span>
             <div class="control-area">
                 <div id="input-ui">
-                    <span style="font-weight: bold; color: #555;">預計開啟:</span>
-                    <input type="number" id="duration" value="10" min="0" max="60" 
-                           oninput="if(value>60)value=60;if(value<0)value=0"> 
+                    <span style="font-weight: bold; color: #555;">灑水時長:</span>
+                    <input type="number" id="duration" value="10" min="1" max="60" 
+                           oninput="if(value>60)value=60;if(value<1)value=1"> 
                     <span style="font-weight: bold; color: #555;">秒</span>
                 </div>
-                
                 <div class="btn-group">
-                    <button id="onBtn" onclick="ctl('on')" class="btn-on">強制開啟</button>
-                    <button id="offBtn" onclick="ctl('off')" class="btn-off">緊急關閉</button>
+                    <button id="onBtn" onclick="ctl('on')" class="btn-on">執行灑水</button>
+                    <button id="offBtn" onclick="ctl('off')" class="btn-off">緊急停止</button>
                 </div>
-                <div id="lockMsg" class="lock-msg" style="display:none;">⚠️ 非控制時段 (07-20)</div>
             </div>
             <div class="value-display">
-                <span id="action-status">準備就緒</span>
+                <span id="action-status">設備已就緒</span>
             </div>
+        </div>
+
+        <div class="box">
+            <span class="label">水閥即時狀況 <span id="connection-tag" class="online-tag tag-off">離線</span></span>
+            <div class="control-area">
+                <div id="valve-state" class="status-val val-off">
+                    <span id="status-dot" class="dot dot-offline"></span>關閉中
+                </div>
+                <div style="color: #666; font-size: 0.9rem;">
+                    控制來源：<span id="ctrl-by" style="font-weight: bold;">系統自動</span>
+                </div>
+                <div style="margin-top: 15px; font-weight: bold; border-top: 1px solid #eee; width: 80%; text-align: center; padding-top: 10px;">
+                    剩餘秒數：<span id="timer-left" style="font-size: 2rem; color: #007bff;">0</span> 秒
+                </div>
+            </div>
+            <div class="value-display"><span id="live-update">等待數據同步...</span></div>
         </div>
     </div>
 
@@ -151,18 +139,17 @@
             const onBtn = document.getElementById('onBtn');
             const durationInput = document.getElementById('duration');
             const timeStatus = document.getElementById('time-status');
-            const lockMsg = document.getElementById('lockMsg');
 
             if (isAllowed) {
                 timeStatus.innerText = "● 接收指令中";
                 timeStatus.style.color = "#2e7d32";
-                lockMsg.style.display = "none";
-                if (!isCoolingDown) onBtn.disabled = false;
-                durationInput.disabled = false;
+                if (!isCoolingDown) {
+                    onBtn.disabled = false;
+                    durationInput.disabled = false;
+                }
             } else {
                 timeStatus.innerText = "○ 暫停接收指令";
                 timeStatus.style.color = "#c62828";
-                lockMsg.style.display = "block";
                 onBtn.disabled = true;
                 durationInput.disabled = true;
             }
@@ -174,22 +161,47 @@
             if (client.connected) {
                 client.publish('esp32/control', cmd);
                 const actionStatus = document.getElementById('action-status');
-                actionStatus.innerText = cmd === 'on' ? "指令已發送" : "已要求關閉";
+                const valveState = document.getElementById('valve-state');
+                const statusDot = document.getElementById('status-dot');
+                const ctrlBy = document.getElementById('ctrl-by');
+                const timerLeft = document.getElementById('timer-left');
 
                 if (cmd === 'on') {
+                    const sec = parseInt(document.getElementById('duration').value);
                     isCoolingDown = true;
+                    
+                    // 鎖定 UI
                     document.getElementById('onBtn').disabled = true;
-                    let countdown = 5;
+                    document.getElementById('duration').disabled = true;
+                    
+                    // 更新狀態顯示
+                    valveState.innerHTML = `<span id="status-dot" class="dot dot-online"></span>開啟中`;
+                    valveState.className = "status-val val-on";
+                    ctrlBy.innerText = "Mr. Bee (手動)";
+                    
+                    let countdown = sec;
+                    timerLeft.innerText = countdown;
+
                     const timer = setInterval(() => {
-                        actionStatus.innerText = `冷卻中 (${countdown}s)`;
                         countdown--;
-                        if (countdown < 0) {
+                        timerLeft.innerText = countdown;
+                        actionStatus.innerText = `執行灑水任務中...`;
+
+                        if (countdown <= 0) {
                             clearInterval(timer);
                             isCoolingDown = false;
-                            actionStatus.innerText = "準備就緒";
+                            valveState.innerHTML = `<span id="status-dot" class="dot dot-online"></span>關閉中`;
+                            valveState.className = "status-val val-off";
+                            ctrlBy.innerText = "系統自動";
+                            actionStatus.innerText = "任務已完成";
                             updateClock(); 
                         }
                     }, 1000);
+                } else {
+                    // 緊急停止
+                    client.publish('esp32/control', 'off');
+                    alert("緊急停止指令已送出！");
+                    location.reload(); 
                 }
             } else {
                 alert("尚未連線至 MQTT 伺服器");
@@ -197,7 +209,17 @@
         }
 
         client.on('connect', () => {
-            document.getElementById('status').innerText = "控制中心：雲端連線成功";
+            document.getElementById('status').innerText = "控制中心：連線成功";
+            document.getElementById('live-update').innerText = "數據已同步";
+            document.getElementById('connection-tag').innerText = "已連線";
+            document.getElementById('connection-tag').className = "online-tag tag-on";
+            document.getElementById('status-dot').className = "dot dot-online";
+        });
+
+        client.on('close', () => {
+            document.getElementById('connection-tag').innerText = "離線";
+            document.getElementById('connection-tag').className = "online-tag tag-off";
+            document.getElementById('status-dot').className = "dot dot-offline";
         });
 
         setInterval(updateClock, 1000);
