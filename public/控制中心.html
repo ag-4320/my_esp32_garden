@@ -3,119 +3,183 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>自動花園 - 控制中心</title>
+    <title>自動花園監測系統 - 控制中心</title>
     <link rel="stylesheet" href="style2.css">
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
     <style>
-        .container { display: flex; flex-wrap: wrap; gap: 20px; padding: 20px; justify-content: center; }
-        .box { min-width: 280px; padding: 25px; position: relative; }
-        .time-label { position: absolute; top: 10px; left: 15px; font-size: 0.8rem; color: #666; }
-        .time-display { font-size: 2.5rem; font-weight: bold; margin: 15px 0; color: #333; }
-        .status-text { font-size: 0.9rem; padding: 5px 10px; border-radius: 5px; }
-        .status-ok { background: #e8f5e9; color: #2e7d32; }
-        .status-no { background: #ffebee; color: #c62828; }
-        
+        /* 完全對齊首頁的 Canvas 空間感，改用來放置控制元件 */
+        .control-area {
+            width: 100%;
+            height: 120px; /* 與首頁 canvas 高度一致 */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        /* 時間顯示樣式 */
+        .time-text {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #333;
+        }
+        /* 輸入框與按鈕樣式 */
         input[type="number"] {
-            width: 60px; padding: 8px; margin: 10px; border: 1px solid #ddd; border-radius: 4px;
+            width: 50px;
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .btn-group {
+            margin-top: 10px;
         }
         button {
-            padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; transition: 0.3s;
+            padding: 8px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.3s;
         }
-        button:disabled { background: #ccc !important; cursor: not-allowed; }
-        .btn-on { background: #4caf50; color: white; }
-        .btn-off { background: #f44336; color: white; margin-left: 10px; }
-        
-        .lock-overlay { color: #f44336; font-weight: bold; margin-top: 10px; display: none; }
+        .btn-on { background-color: #4caf50; color: white; }
+        .btn-off { background-color: #f44336; color: white; margin-left: 5px; }
+        button:disabled { background-color: #ccc !important; cursor: not-allowed; opacity: 0.6; }
+
+        .lock-msg {
+            color: #f44336;
+            font-size: 0.85rem;
+            font-weight: bold;
+            margin-top: 5px;
+        }
     </style>
 </head>
 <body>
+    
     <header>
         <h1>遠端控制設備</h1>
         <ul>
-            <li><a href="首頁.html">回首頁</a></li>
+            <li><a href="首頁.html">首頁</a></li>
+            <li><a href="動機.html">動機</a></li>
+            <li><a href="訂閱.html">訂閱</a></li>
+            <li><a href="製作名單.html">製作名單</a></li>
             <li><a href="控制中心.html">控制中心</a></li>
         </ul>
-    </header>
+    </header> 
+
+    <section class="標題">        
+        <h2 id="status">正在建立雲端連線...</h2>
+    </section>
 
     <div class="container">
         <div class="box">
-            <span class="time-label">現在時間</span>
-            <div id="clock" class="time-display">00:00:00</div>
-            <div id="receive-status" class="status-text">檢查時段中...</div>
+            <span class="label">現在時間</span>
+            <div class="control-area">
+                <div id="clock" class="time-text">00:00:00</div>
+            </div>
+            <div class="value-display">
+                <span id="time-status" style="font-size: 1rem;">檢查中...</span>
+            </div>
+        </div>
+    
+        <div class="box">
+            <span class="label">水閥控制開關</span>
+            <div class="control-area">
+                <div id="input-ui">
+                    <label>預計開啟:</label>
+                    <input type="number" id="duration" value="10" min="1" max="60"> 秒
+                </div>
+                <div class="btn-group">
+                    <button id="onBtn" onclick="ctl('on')" class="btn-on">強制開啟</button>
+                    <button id="offBtn" onclick="ctl('off')" class="btn-off">緊急關閉</button>
+                </div>
+                <div id="lockMsg" class="lock-msg" style="display:none;">非控制時段 (07-20)</div>
+            </div>
+            <div class="value-display">
+                <span id="action-status">準備就緒</span>
+            </div>
         </div>
 
-        <div class="box">
-            <h3>手動水閥控制</h3>
-            <div style="margin: 15px 0;">
-                <label>開啟時長:</label>
-                <input type="number" id="duration" value="10" min="1" max="60"> 秒
-            </div>
-            
-            <button id="onBtn" onclick="ctl('on')" class="btn-on">強制開啟</button>
-            <button id="offBtn" onclick="ctl('off')" class="btn-off">緊急關閉</button>
-            
-            <div id="lockMsg" class="lock-overlay">⚠️ 目前非控制時段 (07:00-20:00)</div>
         </div>
-    </div>
 
     <script>
-        // --- MQTT 連線 ---
+        // --- MQTT 連線設定 ---
         const client = mqtt.connect('wss://f17a8164c5cb466da01ab155fdc041cf.s1.eu.hivemq.cloud:8884/mqtt', {
             username: 'ag-4320',
             password: 'Jason5238137'
         });
 
-        // --- 時間與權限控制邏輯 ---
-        function updateUI() {
+        let isCoolingDown = false; // 防呆冷卻狀態
+
+        function updateClock() {
             const now = new Date();
             const h = now.getHours();
-            const timeStr = now.toLocaleTimeString('zh-TW', { hour12: false });
-            document.getElementById('clock').innerText = timeStr;
+            document.getElementById('clock').innerText = now.toLocaleTimeString('zh-TW', { hour12: false });
 
-            // 定義時段：7點 到 20點
+            // 時段判定 (07:00 ~ 20:00)
             const isAllowed = (h >= 7 && h < 20);
-            const statusEl = document.getElementById('receive-status');
             const onBtn = document.getElementById('onBtn');
             const durationInput = document.getElementById('duration');
+            const timeStatus = document.getElementById('time-status');
             const lockMsg = document.getElementById('lockMsg');
 
             if (isAllowed) {
-                statusEl.innerText = "● 接收指令中";
-                statusEl.className = "status-text status-ok";
-                onBtn.disabled = false;
-                durationInput.disabled = false;
+                timeStatus.innerText = "接收指令中";
+                timeStatus.style.color = "#2e7d32";
                 lockMsg.style.display = "none";
+                if (!isCoolingDown) onBtn.disabled = false; // 只有在沒冷卻時才解鎖
+                durationInput.disabled = false;
             } else {
-                statusEl.innerText = "○ 暫停接收指令";
-                statusEl.className = "status-text status-no";
+                timeStatus.innerText = "暫停接收指令";
+                timeStatus.style.color = "#c62828";
+                lockMsg.style.display = "block";
                 onBtn.disabled = true;
                 durationInput.disabled = true;
-                lockMsg.style.display = "block";
             }
         }
 
-        // --- 控制函數 ---
         function ctl(cmd) {
+            if (isCoolingDown && cmd === 'on') return;
+
             if (client.connected) {
+                client.publish('esp32/control', cmd);
+                
+                const actionStatus = document.getElementById('action-status');
+                actionStatus.innerText = cmd === 'on' ? "指令已送出" : "已要求關閉";
+
+                // --- 防呆邏輯：按下開啟後冷卻 5 秒 ---
                 if (cmd === 'on') {
-                    const sec = document.getElementById('duration').value;
-                    // 送出 "on" 指令
-                    client.publish('esp32/control', 'on');
-                    alert("已下達開啟指令 (" + sec + "秒)");
-                } else {
-                    client.publish('esp32/control', 'off');
-                    alert("已下達關閉指令");
+                    isCoolingDown = true;
+                    document.getElementById('onBtn').disabled = true;
+                    let countdown = 5;
+                    
+                    const timer = setInterval(() => {
+                        actionStatus.innerText = `冷卻中 (${countdown}s)`;
+                        countdown--;
+                        if (countdown < 0) {
+                            clearInterval(timer);
+                            isCoolingDown = false;
+                            actionStatus.innerText = "準備就緒";
+                            updateClock(); // 重新檢查時段來決定是否解鎖
+                        }
+                    }, 1000);
                 }
             } else {
-                alert("錯誤：尚未連線至雲端伺服器");
+                alert("尚未連線至 MQTT 伺服器");
             }
         }
 
-        // 每秒更新一次 UI
-        setInterval(updateUI, 1000);
-        updateUI();
+        client.on('connect', () => {
+            document.getElementById('status').innerText = "控制中心：雲端連線成功";
+        });
 
-        client.on('connect', () => { console.log("MQTT Connected"); });
+        setInterval(updateClock, 1000);
+        updateClock();
     </script>
 </body>
 </html>
