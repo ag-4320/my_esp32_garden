@@ -31,13 +31,36 @@
         button:disabled { background-color: #ccc !important; opacity: 0.6; }
 
         .log-box { grid-column: span 2; width: 100%; justify-content: flex-start; padding-top: 50px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; background: white; border-radius: 8px; overflow: hidden; }
-        th, td { border: 1px solid #eee; padding: 12px; text-align: center; }
-        th { background-color: #007bff; color: white; }
         
-        .badge { padding: 3px 8px; border-radius: 5px; color: white; font-size: 0.8rem; font-weight: bold; }
-        .bg-manual { background: #4caf50; }
-        .bg-stop { background: #f44336; }
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin-top: 10px; 
+            background: white; 
+            border-radius: 12px; /* 圓角更明顯 */
+            overflow: hidden; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05); /* 加一點陰影 */
+        }
+
+        th { 
+            background-color: #0c0a7d; /* 改為與首頁一致的深藍 */
+            color: white; 
+            padding: 15px;
+        }
+
+        td { 
+            border-bottom: 1px solid #f0f0f0; /* 只留底線，看起來比較簡潔 */
+            padding: 12px; 
+            text-align: center; 
+            color: #333;
+        }
+
+        /* 斑馬線效果 */
+        tbody tr:nth-child(even) { background-color: #f8f9fa; }
+
+        .badge { padding: 4px 10px; border-radius: 6px; color: white; font-size: 0.8rem; font-weight: bold; }
+        .bg-manual { background: #2e7d32; } /* 深綠 */
+        .bg-stop { background: #c62828; }   /* 深紅 */
         
         .page-ctrl { margin-top: 15px; display: flex; gap: 15px; align-items: center; }
         .status-tag { font-weight: 900; }
