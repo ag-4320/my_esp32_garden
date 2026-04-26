@@ -7,170 +7,39 @@
     <link rel="stylesheet" href="style2.css">
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
     <style>
-        /* 徹底對齊首頁規格的強效樣式 */
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        
-        body { 
-            background-color: #f4f7f9; 
-            font-family: "Microsoft JhengHei", -apple-system, sans-serif;
-            color: #333;
-            padding-bottom: 50px;
-        }
-
-        /* --- 關鍵：比照首頁的導覽列樣式 --- */
-        header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px 40px;
-            background: rgba(255, 255, 255, 0.9);
-            backdrop-filter: blur(10px);
-            box-shadow: 0 2px 15px rgba(0,0,0,0.05);
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-        }
-
-        header h1 {
-            font-size: 1.5rem;
-            color: #0c0a7d;
-            font-weight: 900;
-        }
-
-        header ul {
-            display: flex;
-            list-style: none;
-            gap: 20px;
-        }
-
-        header ul li a {
-            text-decoration: none;
-            color: #555;
-            font-weight: bold;
-            font-size: 1rem;
-            padding: 8px 12px;
-            border-radius: 8px;
-            transition: all 0.3s ease;
-            position: relative;
-        }
-
-        /* 導覽按鈕懸浮效果 */
-        header ul li a:hover {
-            color: #007bff;
-            background: rgba(0, 123, 255, 0.05);
-        }
-
-        /* 當前頁面標示 (如果此頁是即時監控) */
-        header ul li a.active {
-            color: #007bff;
-        }
-        
-        header ul li a.active::after {
-            content: "";
-            position: absolute;
-            bottom: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 20px;
-            height: 3px;
-            background: #007bff;
-            border-radius: 10px;
-        }
-
-        /* --- 格子佈局：對齊首頁 Grid --- */
-        .標題 {
-            text-align: center;
-            padding: 40px 20px 20px 20px;
-        }
-        #status {
-            font-size: 1.1rem;
-            color: #64748b;
-            font-weight: bold;
-            letter-spacing: 1px;
-        }
-
-        .container { 
-            display: grid; 
-            grid-template-columns: 1fr 1fr; 
-            gap: 25px; 
-            padding: 0 25px; 
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        /* 標準格子：毛玻璃質感 */
-        .box { 
-            background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(12px); 
-            border-radius: 20px; 
-            border: 1px solid rgba(255, 255, 255, 0.4);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05); 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            justify-content: center; 
-            min-height: 240px; 
-            padding: 25px;
-            position: relative;
-            transition: all 0.3s ease;
-        }
-        .box:hover { transform: translateY(-5px); box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08); }
-
-        /* 加權結果：深藍底色對齊首頁 */
-        .box-total { 
-            background-color: #0c0a7d !important; 
-            color: #ffffff !important;
-            grid-column: span 2; 
-        }
-        .box-total .label { border-left-color: #ffffff !important; color: #ffffff !important; }
-        .box-total .value-display span { color: #ffffff !important; text-shadow: 0 0 15px rgba(255,255,255,0.4); }
-
-        .label { 
-            position: absolute; 
-            top: 25px; 
-            left: 25px; 
-            font-weight: 900; 
-            color: #444; 
-            font-size: 0.9rem; 
-            border-left: 5px solid #007bff; 
-            padding-left: 10px;
-        }
-
-        .value-display { margin-top: 15px; text-align: center; }
-        .value-display span {
-            font-size: 3rem;
-            font-weight: 900;
-            color: #007bff;
-            font-family: 'Consolas', monospace;
-        }
-        .value-display small { font-size: 1.1rem; margin-left: 5px; font-weight: bold; }
-
         canvas { 
             width: 100% !important; 
-            max-height: 100px; 
-            margin-top: 35px; 
+            max-height: 120px; 
+            margin-bottom: 10px;
+        }
+        .box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .box-total { 
+            background-color: #0c0a7d !important; 
+            border: 1px solid #d1d9e0 !important; 
         }
     </style>
 </head>
 <body>
     
     <header>
-        <h1>即時監控數據</h1>
-        <nav>
-            <ul>
-                <li><a href="首頁.html">首頁</a></li>
-                <li><a href="動機.html">動機</a></li>
-                <li><a href="製作名單.html">製作名單</a></li>
-                <li><a href="控制中心.html">控制中心</a></li>
-                <li><a href="即時監控.html" class="active">即時監控</a></li>
-            </ul>
-        </nav>
+        <h1>自動花園監測數值</h1>
+        <ul>
+            <li><a href="首頁.html">首頁</a></li>
+            <li><a href="動機.html">動機</a></li>
+            <li><a href="訂閱.html">訂閱</a></li>
+            <li><a href="製作名單.html">製作名單</a></li>
+            <li><a href="控制中心.html">控制中心</a></li>
+        </ul>
     </header> 
 
     <section class="標題">        
-        <h2 id="status">● 雲端通訊建立中...</h2>
+        <h2 id="status">正在建立雲端連線...</h2>
     </section>
 
     <div class="container">
@@ -178,7 +47,8 @@
             <span class="label">土壤濕度</span>
             <canvas id="chart-soil"></canvas>
             <div class="value-display">
-                <span id="home-moisture">--.-</span><small>%</small>
+                <span id="home-moisture">--.-</span>
+                <small>%</small>
             </div>
         </div>
     
@@ -186,7 +56,8 @@
             <span class="label">環境溫度</span>
             <canvas id="chart-temp"></canvas>
             <div class="value-display">
-                <span id="home-temp">--.-</span><small>°C</small>
+                <span id="home-temp">--.-</span>
+                <small>°C</small>
             </div>
         </div>
     
@@ -194,7 +65,8 @@
             <span class="label">環境濕度</span>
             <canvas id="chart-humi"></canvas>
             <div class="value-display">
-                <span id="home-humi">--.-</span><small>%</small>
+                <span id="home-humi">--.-</span>
+                <small>%</small>
             </div>
         </div>
     
@@ -202,26 +74,31 @@
             <span class="label">光照強度</span>
             <canvas id="chart-lux"></canvas>
             <div class="value-display">
-                <span id="home-lux">--.-</span><small>lx</small>
+                <span id="home-lux">--.-</span>
+                <small>lx</small>
             </div>
         </div>
 
         <div class="box box-total">
-            <span class="label">健康加權總分</span>
+            <span class="label">加權結果</span>
             <canvas id="chart-total"></canvas>
             <div class="value-display">
-                <span id="home-total">--.-</span><small>分</small>
+                <span id="home-total">--.-</span>
+                <small>Score</small>
             </div>
         </div>
     </div>
 
     <script>
-        // MQTT 與 Chart.js 邏輯保持不變...
+        // --- MQTT 連線設定 ---
         const client = mqtt.connect('wss://f17a8164c5cb466da01ab155fdc041cf.s1.eu.hivemq.cloud:8884/mqtt', {
-            username: 'ag-4320', password: 'Jason5238137'
+            username: 'ag-4320',
+            password: 'Jason5238137'
         });
 
-        const MAX_POINTS = 50;
+        const MAX_POINTS = 200; 
+
+        // --- 1. 從 LocalStorage 載入歷史數據 ---
         let savedHistory = JSON.parse(localStorage.getItem('garden_history')) || {
             soil: Array(MAX_POINTS).fill(null),
             temp: Array(MAX_POINTS).fill(null),
@@ -230,24 +107,22 @@
             total: Array(MAX_POINTS).fill(null)
         };
 
-        function initChart(id, label, color) {
+        function initChart(id, label, color, type) {
             const ctx = document.getElementById(id).getContext('2d');
-            const isTotal = id === 'chart-total';
-            const finalColor = isTotal ? '#ffffff' : color;
-
             return new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: Array(MAX_POINTS).fill(''),
                     datasets: [{
                         label: label,
-                        data: savedHistory[id.split('-')[1]], 
-                        borderColor: finalColor,
+                        // --- 2. 使用載入的歷史數據初始化 ---
+                        data: savedHistory[type], 
+                        borderColor: color,
                         borderWidth: 2,
                         pointRadius: 0,
                         fill: true,
-                        backgroundColor: finalColor + '22',
-                        tension: 0.4
+                        backgroundColor: color + '11',
+                        tension: 0.3
                     }]
                 },
                 options: {
@@ -257,13 +132,8 @@
                     scales: { 
                         x: { display: false }, 
                         y: { 
-                            display: true,
-                            beginAtZero: false,
-                            grid: { display: false },
-                            ticks: { 
-                                color: isTotal ? 'rgba(255,255,255,0.5)' : '#94a3b8',
-                                font: { size: 9 } 
-                            }
+                            beginAtZero: false, 
+                            ticks: { font: { size: 10 }, maxTicksLimit: 5 } 
                         } 
                     },
                     plugins: { legend: { display: false } }
@@ -272,57 +142,65 @@
         }
 
         const charts = {
-            soil: initChart('chart-soil', '土壤', '#4caf50'),
-            temp: initChart('chart-temp', '溫度', '#ff9800'),
-            humi: initChart('chart-humi', '濕度', '#2196f3'),
-            lux: initChart('chart-lux', '光照', '#fbc02d'),
-            total: initChart('chart-total', '總分', '#ffffff')
+            soil: initChart('chart-soil', '土壤', '#4caf50', 'soil'),
+            temp: initChart('chart-temp', '溫度', '#ff9800', 'temp'),
+            humi: initChart('chart-humi', '濕度', '#2196f3', 'humi'),
+            lux: initChart('chart-lux', '光照', '#fbc02d', 'lux'),
+            total: initChart('chart-total', '總分', '#90a4ae', 'total')
         };
 
+        // --- 3. 修改後的資料推送函數 (包含儲存邏輯) ---
         function pushData(chart, val, type) {
             if (val === null || val === undefined) return;
+            
             chart.data.datasets[0].data.push(val);
             if (chart.data.datasets[0].data.length > MAX_POINTS) {
                 chart.data.datasets[0].data.shift();
             }
             chart.update('none');
+
+            // 同步更新本地紀錄並存檔
             savedHistory[type] = chart.data.datasets[0].data;
             localStorage.setItem('garden_history', JSON.stringify(savedHistory));
         }
 
         client.on('connect', () => {
-            document.getElementById('status').innerText = "● 雲端連線成功 (同步中)";
+            document.getElementById('status').innerText = "雲端連線成功，等待數據中...";
             client.subscribe('esp32/garden/all');
         });
 
         client.on('message', (topic, payload) => {
             try {
                 const res = JSON.parse(payload.toString());
-                document.getElementById('status').innerText = "最後更新時間：" + new Date().toLocaleTimeString();
+                document.getElementById('status').innerText = "最後更新: " + new Date().toLocaleTimeString();
                 
-                if(res.soil !== undefined) {
+                if(res.soil !== undefined && res.soil !== null) {
                     document.getElementById('home-moisture').innerText = res.soil;
                     pushData(charts.soil, res.soil, 'soil');
                 }
-                if(res.t !== undefined) {
+                if(res.t !== undefined && res.t !== null) {
                     document.getElementById('home-temp').innerText = res.t;
                     pushData(charts.temp, res.t, 'temp');
                 }
-                if(res.h !== undefined) {
+                if(res.h !== undefined && res.h !== null) {
                     document.getElementById('home-humi').innerText = res.h;
                     pushData(charts.humi, res.h, 'humi');
                 }
-                if(res.lux !== undefined) {
-                    const luxVal = Math.round(res.lux);
-                    document.getElementById('home-lux').innerText = luxVal;
-                    pushData(charts.lux, luxVal, 'lux');
+                if(res.lux !== undefined && res.lux !== null) {
+                    document.getElementById('home-lux').innerText = Math.round(res.lux);
+                    pushData(charts.lux, res.lux, 'lux');
                 }
-                if(res.total !== undefined) {
-                    const totalVal = parseFloat(res.total).toFixed(1);
-                    document.getElementById('home-total').innerText = totalVal;
-                    pushData(charts.total, totalVal, 'total');
+                if(res.total !== undefined && res.total !== null) {
+                    document.getElementById('home-total').innerText = parseFloat(res.total).toFixed(1);
+                    pushData(charts.total, res.total, 'total');
                 }
-            } catch (e) { console.error("數據解析錯誤"); }
+            } catch (e) {
+                console.error("JSON 解析錯誤:", e);
+            }
+        });
+
+        client.on('error', (err) => {
+            document.getElementById('status').innerText = "連線失敗: " + err;
         });
     </script>
 </body>
