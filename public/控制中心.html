@@ -7,85 +7,48 @@
     <link rel="stylesheet" href="style2.css">
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
     <style>
-        /* 基礎佈局 */
+        /* 徹底清除最上方間距與雜訊 */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background-color: #f4f7f9; font-family: "Microsoft JhengHei", sans-serif; padding-bottom: 50px; }
+        
+        header { margin-bottom: 20px; } /* 讓導覽列跟下方內容保持乾淨距離 */
+
+        /* 格子佈局 */
         .control-area { width: 100%; height: 160px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .box { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 280px; }
+        .box { background: white; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 280px; }
         
         /* 大時間風格 */
         .time-text {
             font-size: 3.5rem; font-weight: 800; color: #007bff;
-            text-shadow: 0 0 15px rgba(0, 123, 255, 0.4);
-            font-family: 'Courier New', Courier, monospace;
-            margin: 10px 0;
+            text-shadow: 0 0 15px rgba(0, 123, 255, 0.2);
+            font-family: 'Courier New', monospace;
         }
 
-        /* 改良後的「連線標籤」：視覺更舒服、圓潤 */
-        .conn-badge {
-            font-size: 0.75rem;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-weight: bold;
-            transition: 0.3s;
-            letter-spacing: 1px;
-        }
+        /* 改良連線標籤 */
+        .conn-badge { font-size: 0.75rem; padding: 4px 12px; border-radius: 20px; font-weight: bold; }
         .status-online { background: #e3f2fd; color: #1976d2; border: 1px solid #90caf9; }
         .status-offline { background: #ffebee; color: #d32f2f; border: 1px solid #ef9a9a; }
 
-        /* 輸入區域 */
-        #input-ui { margin-bottom: 15px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
-        .input-row { display: flex; align-items: center; gap: 8px; }
         input[type="number"], input[type="text"] {
             padding: 8px; border: 2px solid #007bff; border-radius: 8px;
-            text-align: center; font-size: 1rem; font-weight: bold;
+            text-align: center; font-size: 1rem; font-weight: bold; margin: 5px;
         }
-        input[type="text"] { width: 150px; }
-        input[type="number"] { width: 60px; }
 
-        /* 按鈕風格 */
-        .btn-group { margin-top: 5px; }
-        button { padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; transition: 0.3s; font-size: 1rem; }
+        button { padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; transition: 0.3s; }
         .btn-on { background-color: #4caf50; color: white; }
         .btn-off { background-color: #f44336; color: white; margin-left: 10px; }
         button:disabled { background-color: #ccc !important; cursor: not-allowed; opacity: 0.6; }
 
-        /* --- 改良後的表格：低對比、護眼色調 --- */
-        .log-box { grid-column: span 2; width: 100%; margin-top: 20px; padding: 25px; box-sizing: border-box; }
+        /* 護眼日誌表格 */
+        .log-box { grid-column: span 2; width: 100%; margin-top: 20px; padding: 25px; }
+        .table-container { width: 100%; border-radius: 12px; overflow: hidden; border: 1px solid #eee; }
+        table { width: 100%; border-collapse: collapse; background: #fff; }
+        th { background-color: #f8f9fa; color: #666; padding: 15px; border-bottom: 2px solid #eee; font-size: 0.9rem; }
+        td { padding: 12px; text-align: center; border-bottom: 1px solid #f9f9f9; color: #555; font-size: 0.9rem; }
         
-        .table-container {
-            width: 100%;
-            border-radius: 12px;
-            overflow: hidden;
-            border: 1px solid #e0e0e0;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.02);
-        }
-
-        table { width: 100%; border-collapse: collapse; background: #fff; font-size: 0.95rem; }
-        
-        th { 
-            background-color: #f8f9fa; /* 淺灰色背景，不刺眼 */
-            color: #555; 
-            font-weight: 600; 
-            padding: 15px;
-            border-bottom: 2px solid #eee;
-        }
-
-        td { padding: 12px; text-align: center; border-bottom: 1px solid #f0f0f0; color: #666; }
-        
-        tr:hover { background-color: #fcfcfc; } /* 滑鼠經過時微亮 */
-
-        /* 分頁按鈕美化 */
-        .page-ctrl { margin-top: 20px; display: flex; gap: 15px; align-items: center; }
-        .page-btn {
-            background: #fff; border: 1px solid #ddd; padding: 6px 15px; 
-            border-radius: 6px; cursor: pointer; color: #666; transition: 0.2s;
-        }
-        .page-btn:hover { background: #f0f7ff; border-color: #007bff; color: #007bff; }
-
-        /* 表格內標籤 */
         .badge { padding: 3px 10px; border-radius: 50px; color: white; font-size: 0.8rem; }
-        .bg-manual { background: #81c784; } /* 柔和綠 */
-        .bg-auto { background: #64b5f6; }   /* 柔和藍 */
-        .bg-stop { background: #e57373; }   /* 柔和紅 */
+        .bg-manual { background: #81c784; }
+        .bg-stop { background: #e57373; }
     </style>
 </head>
 <body>
@@ -100,33 +63,21 @@
         </ul>
     </header> 
 
-    <section class="標題">        
-        <h2 id="status">正在同步雲端數據...</h2>
-    </section>
-
-    <div class="container" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+    <div class="container" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding: 0 20px;">
         <div class="box">
             <span class="label">系統基準時間</span>
-            <div class="control-area">
-                <div id="clock" class="time-text">00:00:00</div>
-            </div>
-            <div class="value-display"><span id="time-status" style="font-weight: bold;">檢查中...</span></div>
+            <div class="control-area"><div id="clock" class="time-text">00:00:00</div></div>
+            <div class="value-display"><span id="time-status" style="font-weight: bold;">讀取中...</span></div>
         </div>
     
         <div class="box">
             <span class="label">水閥手動控制</span>
             <div class="control-area">
-                <div id="input-ui">
-                    <div class="input-row">
-                        <span style="font-weight: bold; color: #666;">操作員姓名:</span>
-                        <input type="text" id="userName" placeholder="請填寫" maxlength="10">
-                    </div>
-                    <div class="input-row">
-                        <span style="font-weight: bold; color: #666;">執行秒數:</span>
-                        <input type="number" id="duration" value="10" min="1" max="60" oninput="if(value>60)value=60;if(value<1)value=1">
-                    </div>
+                <input type="text" id="userName" placeholder="請輸入姓名" maxlength="10">
+                <div style="margin-top:5px;">
+                    <input type="number" id="duration" value="10" min="1" max="60"> 秒
                 </div>
-                <div class="btn-group">
+                <div class="btn-group" style="margin-top:10px;">
                     <button id="onBtn" onclick="ctl('on')" class="btn-on">執行灑水</button>
                     <button id="offBtn" onclick="ctl('off')" class="btn-off">緊急停止</button>
                 </div>
@@ -139,9 +90,8 @@
             <div class="control-area">
                 <div id="v-state" style="font-size: 1.6rem; font-weight: bold; color: #999;">等待操控</div>
                 <div id="v-source" style="font-size: 0.9rem; color: #888; margin-top: 8px;">控制來源：系統自動</div>
-                <div style="font-size: 2.2rem; color: #007bff; font-weight: bold; margin-top: 12px;"><span id="timer-left">0</span><span style="font-size: 1rem;">s</span></div>
+                <div style="font-size: 2.2rem; color: #007bff; font-weight: bold; margin-top: 12px;"><span id="timer-left">0</span>s</div>
             </div>
-            <div class="value-display"><span id="live-update">同步中...</span></div>
         </div>
 
         <div class="box log-box">
@@ -149,137 +99,127 @@
             <div class="table-container">
                 <table>
                     <thead>
-                        <tr>
-                            <th>執行時間</th>
-                            <th>操作員 / 模式</th>
-                            <th>資訊 / 加權</th>
-                            <th>動作</th>
-                        </tr>
+                        <tr><th>執行時間</th><th>操作員</th><th>資訊</th><th>動作</th></tr>
                     </thead>
-                    <tbody id="log-body">
-                        </tbody>
+                    <tbody id="log-body"></tbody>
                 </table>
             </div>
-            <div class="page-ctrl">
-                <button class="page-btn" onclick="changePage(-1)">◀ 上一頁</button>
-                <span id="page-info" style="color: #888; font-weight: bold;">第 1 頁</span>
-                <button class="page-btn" onclick="changePage(1)">下一頁 ▶</button>
+            <div style="margin-top:10px; display: flex; justify-content: space-between; width: 100%;">
+                <span id="page-info" style="font-size: 0.8rem; color: #999;">顯示最近 10 筆紀錄</span>
+                <button onclick="clearLogs()" style="font-size: 0.7rem; color: #bbb; background: none; border: 1px solid #eee; padding: 2px 8px; border-radius: 4px;">清空本機紀錄</button>
             </div>
         </div>
     </div>
 
     <script>
         const client = mqtt.connect('wss://f17a8164c5cb466da01ab155fdc041cf.s1.eu.hivemq.cloud:8884/mqtt', {
-            username: 'ag-4320',
-            password: 'Jason5238137'
+            username: 'ag-4320', password: 'Jason5238137'
         });
 
-        let historyLogs = []; 
-        let currentPage = 1;
+        let historyLogs = JSON.parse(localStorage.getItem('garden_logs')) || []; 
         let isCoolingDown = false;
+        let countdownTimer = null;
 
         client.on('message', (topic, message) => {
             if (topic === 'esp32/garden/logs') {
                 const data = JSON.parse(message.toString());
                 historyLogs.unshift(data); 
                 if (historyLogs.length > 50) historyLogs.pop();
-                renderTable();
+                saveAndRender();
             }
         });
 
         client.on('connect', () => {
-            document.getElementById('status').innerText = "控制中心：全球數據同步已連線";
             const tag = document.getElementById('conn-tag');
             tag.innerText = "已連線";
             tag.className = "conn-badge status-online";
             client.subscribe('esp32/garden/logs');
+            renderTable(); 
         });
-
-        function updateClock() {
-            const now = new Date();
-            document.getElementById('clock').innerText = now.toLocaleTimeString('zh-TW', { hour12: false });
-            
-            const h = now.getHours();
-            const isAllowed = (h >= 7 && h < 20);
-            if (!isCoolingDown) {
-                document.getElementById('onBtn').disabled = !isAllowed;
-                document.getElementById('time-status').innerText = isAllowed ? "● 指令接收時段" : "○ 離峰暫停時段";
-                document.getElementById('time-status').style.color = isAllowed ? "#2e7d32" : "#c62828";
-            }
-        }
 
         function ctl(cmd) {
             const user = document.getElementById('userName').value.trim();
             const sec = document.getElementById('duration').value;
 
-            if (!user && cmd === 'on') {
-                alert("請務必輸入操作員姓名，以利系統記錄！");
-                return;
-            }
+            if (!user) { alert("請務必輸入操作員姓名！"); return; }
 
-            if (client.connected) {
-                const nowTime = new Date().toLocaleTimeString('zh-TW', {hour12:false});
-                let logEntry = {
-                    time: nowTime,
-                    user: cmd === 'on' ? user : (user || "手動干預"),
-                    info: cmd === 'on' ? sec + " 秒" : "強制切斷",
-                    status: cmd === 'on' ? "手動開啟" : "手動停止",
-                    type: cmd === 'on' ? "manual" : "stop"
-                };
+            const nowTime = new Date().toLocaleTimeString('zh-TW', {hour12:false});
+            let logEntry = {
+                time: nowTime,
+                user: user,
+                info: cmd === 'on' ? sec + " 秒" : "手動切斷",
+                status: cmd === 'on' ? "手動開啟" : "緊急停止",
+                type: cmd === 'on' ? "manual" : "stop"
+            };
 
-                client.publish('esp32/control', cmd);
-                client.publish('esp32/garden/logs', JSON.stringify(logEntry));
+            client.publish('esp32/control', cmd);
+            client.publish('esp32/garden/logs', JSON.stringify(logEntry));
 
-                if (cmd === 'on') {
-                    isCoolingDown = true;
-                    document.getElementById('onBtn').disabled = true;
-                    document.getElementById('userName').disabled = true;
-                    document.getElementById('v-state').innerText = "開啟中";
-                    document.getElementById('v-state').style.color = "#4caf50";
-                    document.getElementById('v-source').innerText = "控制來源：" + user;
-                    
-                    let count = sec;
+            if (cmd === 'on') {
+                isCoolingDown = true;
+                document.getElementById('onBtn').disabled = true;
+                document.getElementById('v-state').innerText = "開啟中";
+                document.getElementById('v-state').style.color = "#4caf50";
+                document.getElementById('v-source').innerText = "控制來源：" + user;
+                
+                let count = sec;
+                document.getElementById('timer-left').innerText = count;
+                countdownTimer = setInterval(() => {
+                    count--;
                     document.getElementById('timer-left').innerText = count;
-                    const timer = setInterval(() => {
-                        count--;
-                        document.getElementById('timer-left').innerText = count;
-                        if (count <= 0) {
-                            clearInterval(timer);
-                            isCoolingDown = false;
-                            document.getElementById('v-state').innerText = "等待操控";
-                            document.getElementById('v-state').style.color = "#999";
-                            document.getElementById('v-source').innerText = "控制來源：系統自動";
-                            document.getElementById('userName').disabled = false;
-                            updateClock();
-                        }
-                    }, 1000);
-                } else {
-                    location.reload(); 
-                }
+                    if (count <= 0) {
+                        stopCountdown();
+                    }
+                }, 1000);
+            } else {
+                stopCountdown();
+                alert(user + " 已執行緊急停止指令！");
             }
         }
 
+        function stopCountdown() {
+            if(countdownTimer) clearInterval(countdownTimer);
+            isCoolingDown = false;
+            document.getElementById('v-state').innerText = "等待操控";
+            document.getElementById('v-state').style.color = "#999";
+            document.getElementById('v-source').innerText = "控制來源：系統自動";
+            document.getElementById('timer-left').innerText = "0";
+            updateClock();
+        }
+
+        function saveAndRender() {
+            localStorage.setItem('garden_logs', JSON.stringify(historyLogs));
+            renderTable();
+        }
+
         function renderTable() {
-            const start = (currentPage - 1) * 10;
-            const displayData = historyLogs.slice(start, start + 10);
             const body = document.getElementById('log-body');
-            body.innerHTML = displayData.map(log => `
+            body.innerHTML = historyLogs.slice(0, 10).map(log => `
                 <tr>
                     <td>${log.time}</td>
-                    <td style="font-weight:bold;">${log.user}</td>
+                    <td style="font-weight:bold; color:#333;">${log.user}</td>
                     <td>${log.info}</td>
                     <td><span class="badge bg-${log.type}">${log.status}</span></td>
                 </tr>
             `).join('');
-            document.getElementById('page-info').innerText = `第 ${currentPage} 頁`;
         }
 
-        function changePage(dir) {
-            const maxPage = Math.ceil(historyLogs.length / 10) || 1;
-            currentPage += dir;
-            if (currentPage < 1) currentPage = 1;
-            if (currentPage > maxPage) currentPage = maxPage;
-            renderTable();
+        function clearLogs() {
+            if(confirm("確定要清空歷史紀錄嗎？")) {
+                historyLogs = [];
+                saveAndRender();
+            }
+        }
+
+        function updateClock() {
+            document.getElementById('clock').innerText = new Date().toLocaleTimeString('zh-TW', { hour12: false });
+            const h = new Date().getHours();
+            const isAllowed = (h >= 7 && h < 20);
+            if (!isCoolingDown) {
+                document.getElementById('onBtn').disabled = !isAllowed;
+                document.getElementById('time-status').innerText = isAllowed ? "● 指令接收中" : "○ 非服務時段";
+                document.getElementById('time-status').style.color = isAllowed ? "#2e7d32" : "#c62828";
+            }
         }
 
         setInterval(updateClock, 1000);
