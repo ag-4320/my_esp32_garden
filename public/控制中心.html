@@ -121,155 +121,174 @@
     </div>
 
     <script>
-        const client = mqtt.connect('wss://f17a8164c5cb466da01ab155fdc041cf.s1.eu.hivemq.cloud:8884/mqtt', {
-            username: 'ag-4320', password: 'Jason5238137'
-        });
+    const client = mqtt.connect('wss://f17a8164c5cb466da01ab155fdc041cf.s1.eu.hivemq.cloud:8884/mqtt', {
+        username: 'ag-4320', 
+        password: 'Jason5238137'
+    });
 
-        let historyLogs = []; 
-        let currentPage = 1;
-        let lastDataTime = 0;
-        let isCoolingDown = false;
-        let countdownTimer = null; // 用於儲存計時器實例
+    let historyLogs = []; 
+    let currentPage = 1;
+    let lastDataTime = 0;
+    let isCoolingDown = false;
+    let countdownTimer = null; 
 
-        // 當頁面加載時，從 localStorage 讀取紀錄
-        window.onload = function() {
-            const savedLogs = localStorage.getItem('garden_history');
-            if (savedLogs) {
-                historyLogs = JSON.parse(savedLogs);
-                renderTable();
-            }
-        };
+    // 初始化：讀取本地儲存
+    window.onload = function() {
+        const savedLogs = localStorage.getItem('garden_history');
+        if (savedLogs) {
+            historyLogs = JSON.parse(savedLogs);
+            renderTable();
+        }
+    };
 
-        client.on('connect', () => {
-            client.subscribe('esp32/garden/logs');
-            client.subscribe('esp32/garden/all');
-        });
+    client.on('connect', () => {
+        console.log("MQTT 連線成功");
+        client.subscribe('esp32/garden/logs');
+        client.subscribe('esp32/garden/all');
+    });
 
-        client.on('message', (topic, message) => {
-            lastDataTime = Date.now();
-            if (topic === 'esp32/garden/logs') {
+    client.on('message', (topic, message) => {
+        lastDataTime = Date.now();
+        if (topic === 'esp32/garden/logs') {
+            try {
                 const data = JSON.parse(message.toString());
                 addLog(data);
+            } catch (e) {
+                console.error("日誌格式解析錯誤", e);
             }
-        });
+        }
+    });
 
-        // 統一處理新增日誌與本地儲存
-        function addLog(data) {
-            historyLogs.unshift(data);
-            if (historyLogs.length > 50) historyLogs.pop();
-            localStorage.setItem('garden_history', JSON.stringify(historyLogs));
-            renderTable();
+    function addLog(data) {
+        historyLogs.unshift(data);
+        if (historyLogs.length > 50) historyLogs.pop();
+        localStorage.setItem('garden_history', JSON.stringify(historyLogs));
+        renderTable();
+    }
+
+    function updateClock() {
+        const now = new Date();
+        const h = now.getHours();
+        document.getElementById('clock').innerText = now.toLocaleTimeString('zh-TW', { hour12: false });
+
+        const isOnline = (Date.now() - lastDataTime < 12000);
+        const isAllowed = (h >= 7 && h < 20);
+        
+        const statusTag = document.getElementById('status');
+        const onBtn = document.getElementById('onBtn');
+        const timeStatus = document.getElementById('time-status');
+
+        if (!isOnline) {
+            statusTag.innerText = "○ 硬體離線 (未接收到數據)";
+            statusTag.className = "status-tag offline";
+            onBtn.disabled = true;
+        } else {
+            statusTag.innerText = "● 硬體在線 (數據傳輸正常)";
+            statusTag.className = "status-tag online";
+            if (!isCoolingDown) {
+                onBtn.disabled = !isAllowed;
+                timeStatus.innerText = isAllowed ? "● 系統營運中" : "○ 非操作時段";
+                timeStatus.style.color = isAllowed ? "#2e7d32" : "#c62828";
+            }
+        }
+    }
+
+    function ctl(cmd) {
+        const user = document.getElementById('userName').value.trim();
+        const secInput = document.getElementById('duration').value;
+        const sec = parseInt(secInput); // 強制轉成整數
+
+        if (cmd === 'on' && !user) { 
+            alert("請輸入操作員姓名！"); 
+            return; 
         }
 
-        function updateClock() {
-            const now = new Date();
-            const h = now.getHours();
-            document.getElementById('clock').innerText = now.toLocaleTimeString('zh-TW', { hour12: false });
+        if (client.connected) {
+            const nowTime = new Date().toLocaleTimeString('zh-TW', { hour12: false });
+            let logEntry = {
+                time: nowTime, 
+                user: user || "系統",
+                info: cmd === 'on' ? sec + " 秒" : "強制停機",
+                status: cmd === 'on' ? "手動開啟" : "手動停止",
+                type: cmd === 'on' ? "manual" : "stop"
+            };
 
-            const isOnline = (Date.now() - lastDataTime < 12000);
-            const isAllowed = (h >= 7 && h < 20);
-            
-            const statusTag = document.getElementById('status');
-            const onBtn = document.getElementById('onBtn');
-            const timeStatus = document.getElementById('time-status');
+            // 1. 發送指令與紀錄
+            client.publish('esp32/control', cmd);
+            addLog(logEntry);
 
-            if (!isOnline) {
-                statusTag.innerText = "○ 硬體離線 (未接收到數據)";
-                statusTag.className = "status-tag offline";
-                timeStatus.innerText = "○ 硬體離線";
-                timeStatus.style.color = "#888";
-                onBtn.disabled = true;
+            // 2. 更新網頁即時狀態
+            if (cmd === 'on') {
+                isCoolingDown = true;
+                document.getElementById('onBtn').disabled = true;
+                document.getElementById('v-state').innerText = "開啟中";
+                document.getElementById('v-state').style.color = "#4caf50";
+                document.getElementById('v-source').innerText = "控制來源：" + user;
+                document.getElementById('action-status').innerText = "指令已發送";
+
+                let count = sec;
+                document.getElementById('timer-left').innerText = count;
+                
+                if(countdownTimer) clearInterval(countdownTimer); 
+                countdownTimer = setInterval(() => {
+                    count--;
+                    document.getElementById('timer-left').innerText = Math.max(count, 0);
+                    if (count <= 0) {
+                        stopWatering();
+                    }
+                }, 1000);
             } else {
-                statusTag.innerText = "● 硬體在線 (數據傳輸正常)";
-                statusTag.className = "status-tag online";
-                if (!isCoolingDown) {
-                    onBtn.disabled = !isAllowed;
-                    timeStatus.innerText = isAllowed ? "● 系統營運中" : "○ 非操作時段";
-                    timeStatus.style.color = isAllowed ? "#2e7d32" : "#c62828";
-                }
+                stopWatering();
+                document.getElementById('action-status').innerText = "已強制停止";
             }
+        } else {
+            alert("MQTT 尚未連線，請檢查網路或稍後再試");
         }
+    }
 
-        function ctl(cmd) {
-            const user = document.getElementById('userName').value.trim();
-            const sec = document.getElementById('duration').value;
-
-            if (!user && cmd === 'on') { alert("請輸入操作員姓名！"); return; }
-
-            if (client.connected) {
-                const nowTime = new Date().toLocaleTimeString();
-                let logEntry = {
-                    time: nowTime, user: user || "系統",
-                    info: cmd === 'on' ? sec + " 秒" : "強制停機",
-                    status: cmd === 'on' ? "手動開啟" : "手動停止",
-                    type: cmd === 'on' ? "manual" : "stop"
-                };
-
-                client.publish('esp32/control', cmd);
-                // 這裡我們直接呼叫 addLog，確保本地端立刻看到紀錄
-                addLog(logEntry);
-
-                if (cmd === 'on') {
-                    isCoolingDown = true;
-                    document.getElementById('onBtn').disabled = true;
-                    document.getElementById('v-state').innerText = "開啟中";
-                    document.getElementById('v-state').style.color = "#4caf50";
-                    document.getElementById('v-source').innerText = "控制來源：" + user;
-                    
-                    let count = sec;
-                    document.getElementById('timer-left').innerText = count;
-                    
-                    if(countdownTimer) clearInterval(countdownTimer); // 清除舊的
-                    countdownTimer = setInterval(() => {
-                        count--;
-                        document.getElementById('timer-left').innerText = count;
-                        if (count <= 0) {
-                            stopWatering();
-                        }
-                    }, 1000);
-                } else {
-                    // 強制停止邏輯：不再重載頁面，而是重置狀態
-                    stopWatering();
-                    document.getElementById('action-status').innerText = "已強制停止";
-                }
-            }
-        }
-
-        function stopWatering() {
-            if(countdownTimer) clearInterval(countdownTimer);
-            isCoolingDown = false;
-            document.getElementById('v-state').innerText = "關閉中";
-            document.getElementById('v-state').style.color = "#f44336";
-            document.getElementById('v-source').innerText = "控制來源：系統自動";
-            document.getElementById('timer-left').innerText = "0";
-            updateClock();
-        }
-
-        function renderTable() {
-            const start = (currentPage - 1) * 10;
-            const displayData = historyLogs.slice(start, start + 10);
-            const body = document.getElementById('log-body');
-            body.innerHTML = displayData.map(log => `
-                <tr>
-                    <td>${log.time}</td>
-                    <td>${log.user}</td>
-                    <td>${log.info}</td>
-                    <td><span class="badge bg-${log.type}">${log.status}</span></td>
-                </tr>
-            `).join('');
-            document.getElementById('page-info').innerText = `第 ${currentPage} 頁`;
-        }
-
-        function changePage(dir) {
-            const maxPage = Math.ceil(historyLogs.length / 10) || 1;
-            currentPage += dir;
-            if (currentPage < 1) currentPage = 1;
-            if (currentPage > maxPage) currentPage = maxPage;
-            renderTable();
-        }
-
-        setInterval(updateClock, 1000);
+    function stopWatering() {
+        if(countdownTimer) clearInterval(countdownTimer);
+        countdownTimer = null;
+        isCoolingDown = false;
+        document.getElementById('v-state').innerText = "關閉中";
+        document.getElementById('v-state').style.color = "#f44336";
+        document.getElementById('v-source').innerText = "控制來源：系統自動";
+        document.getElementById('timer-left').innerText = "0";
+        document.getElementById('action-status').innerText = "準備就緒";
         updateClock();
-    </script>
+    }
+
+    function renderTable() {
+        const start = (currentPage - 1) * 10;
+        const displayData = historyLogs.slice(start, start + 10);
+        const body = document.getElementById('log-body');
+        
+        if (displayData.length === 0) {
+            body.innerHTML = '<tr><td colspan="4">暫無操作紀錄</td></tr>';
+            return;
+        }
+
+        body.innerHTML = displayData.map(log => `
+            <tr>
+                <td>${log.time}</td>
+                <td>${log.user}</td>
+                <td>${log.info}</td>
+                <td><span class="badge bg-${log.type}">${log.status}</span></td>
+            </tr>
+        `).join('');
+        document.getElementById('page-info').innerText = `第 ${currentPage} 頁`;
+    }
+
+    function changePage(dir) {
+        const maxPage = Math.ceil(historyLogs.length / 10) || 1;
+        currentPage += dir;
+        if (currentPage < 1) currentPage = 1;
+        if (currentPage > maxPage) currentPage = maxPage;
+        renderTable();
+    }
+
+    setInterval(updateClock, 1000);
+    updateClock();
+</script>
 </body>
 </html>
