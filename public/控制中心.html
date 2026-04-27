@@ -214,7 +214,7 @@
 
         // 營運時段設定
         const START_HOUR = 7;
-        const END_HOUR = 18;
+        const END_HOUR = 21;
 
         let historyLogs = []; 
         let currentPage = 1;
@@ -265,7 +265,7 @@
             const isInTime = (currentHour >= START_HOUR && currentHour < END_HOUR);
 
             if (!isInTime) {
-                timeStatus.innerText = "● 非營運時段 (07:00-18:00)";
+                timeStatus.innerText = "● 非營運時段 (07:00-21:00)";
                 timeStatus.style.color = "#ffae00"; 
                 onBtn.disabled = true;
                 onBtn.innerText = "非開放時段";
