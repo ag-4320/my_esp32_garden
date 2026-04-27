@@ -57,9 +57,8 @@
         .badge { padding: 4px 10px; border-radius: 6px; color: white; font-size: 0.8rem; font-weight: bold; }
         .bg-manual { background: #2e7d32; }
         .bg-stop { background: #c62828; }
-        .bg-auto { background: #007bff; }
         
-        .page-ctrl { margin-top: 15px; display: flex; gap: 15px; align-items: center; }
+        .page-ctrl { margin-top: 15px; display: flex; gap: 15px; align-items: center; justify-content: center; }
         .status-tag { font-weight: 900; }
         .online { color: #2e7d32; }
         .offline { color: #c62828; }
@@ -131,13 +130,14 @@
             </table>
             <div class="page-ctrl">
                 <button onclick="changePage(-1)">上一頁</button>
-                <span id="page-info">第 1 頁</span>
+                <span id="page-info">第 1 / 1 頁</span>
                 <button onclick="changePage(1)">下一頁</button>
             </div>
         </div>
     </div>
 
     <script>
+    // MQTT 連線設定
     const client = mqtt.connect('wss://f17a8164c5cb466da01ab155fdc041cf.s1.eu.hivemq.cloud:8884/mqtt', {
         username: 'ag-4320', 
         password: 'Jason5238137'
@@ -149,24 +149,26 @@
     let isCoolingDown = false;
     let countdownTimer = null; 
 
-    // 初始化讀取本地紀錄
+    // 1. 初始化讀取
     window.onload = () => {
         const saved = localStorage.getItem('garden_history');
         if(saved) historyLogs = JSON.parse(saved);
         renderTable();
     };
 
+    // 2. MQTT 事件處理
     client.on('connect', () => {
         console.log("MQTT 已連線");
-        client.subscribe('esp32/garden/all'); // 接收感測器數據
+        client.subscribe('esp32/garden/all'); 
     });
 
     client.on('message', (topic, message) => {
         if (topic === 'esp32/garden/all') {
-            lastDataTime = Date.now(); // 更新在線時間
+            lastDataTime = Date.now(); // 收到硬體訊息，更新在線時間
         }
     });
 
+    // 3. 時鐘與連線偵測
     function updateClock() {
         const now = new Date();
         document.getElementById('clock').innerText = now.toLocaleTimeString('zh-TW', { hour12: false });
@@ -192,4 +194,106 @@
         }
     }
 
-    function ctl(cmd
+    // 4. 控制指令送出
+    function ctl(cmd) {
+        const user = document.getElementById('userName').value.trim();
+        const sec = parseInt(document.getElementById('duration').value) || 10;
+
+        if (cmd === 'on' && !user) { 
+            alert("請輸入測試者姓名！"); 
+            return; 
+        }
+
+        if (client.connected) {
+            const nowTime = new Date().toLocaleTimeString('zh-TW', { hour12: false });
+            let logEntry = {
+                time: nowTime, 
+                user: user || "系統",
+                info: cmd === 'on' ? sec + " 秒" : "強制停止",
+                status: cmd === 'on' ? "手動開啟" : "手動停止",
+                type: cmd === 'on' ? "manual" : "stop"
+            };
+
+            client.publish('esp32/control', cmd);
+            addLog(logEntry);
+
+            if (cmd === 'on') {
+                isCoolingDown = true;
+                document.getElementById('onBtn').disabled = true;
+                document.getElementById('v-state').innerText = "開啟中";
+                document.getElementById('v-state').style.color = "#4caf50";
+                document.getElementById('v-source').innerText = "控制來源：" + user;
+                document.getElementById('action-status').innerText = "指令已送出";
+                
+                let count = sec;
+                document.getElementById('timer-left').innerText = count;
+                if(countdownTimer) clearInterval(countdownTimer); 
+                countdownTimer = setInterval(() => {
+                    count--;
+                    document.getElementById('timer-left').innerText = Math.max(count, 0);
+                    if (count <= 0) stopWatering();
+                }, 1000);
+            } else {
+                stopWatering();
+                document.getElementById('action-status').innerText = "緊急停止成功";
+            }
+        } else {
+            alert("MQTT 尚未連線");
+        }
+    }
+
+    function stopWatering() {
+        if(countdownTimer) clearInterval(countdownTimer);
+        isCoolingDown = false;
+        document.getElementById('v-state').innerText = "關閉中";
+        document.getElementById('v-state').style.color = "#f44336";
+        document.getElementById('v-source').innerText = "目前來源：自動監測";
+        document.getElementById('timer-left').innerText = "0";
+        document.getElementById('action-status').innerText = "系統就緒";
+        updateClock();
+    }
+
+    // 5. 日誌處理邏輯
+    function addLog(data) {
+        historyLogs.unshift(data);
+        if (historyLogs.length > 50) historyLogs.pop();
+        localStorage.setItem('garden_history', JSON.stringify(historyLogs));
+        renderTable();
+    }
+
+    function renderTable() {
+        const body = document.getElementById('log-body');
+        const start = (currentPage - 1) * 10;
+        const displayData = historyLogs.slice(start, start + 10);
+        
+        if (displayData.length === 0) {
+            body.innerHTML = '<tr><td colspan="4">暫無紀錄</td></tr>';
+            return;
+        }
+
+        body.innerHTML = displayData.map(log => `
+            <tr>
+                <td>${log.time}</td>
+                <td>${log.user}</td>
+                <td>${log.info}</td>
+                <td><span class="badge bg-${log.type}">${log.status}</span></td>
+            </tr>
+        `).join('');
+
+        const maxPage = Math.ceil(historyLogs.length / 10) || 1;
+        document.getElementById('page-info').innerText = `第 ${currentPage} / ${maxPage} 頁`;
+    }
+
+    function changePage(dir) {
+        const maxPage = Math.ceil(historyLogs.length / 10) || 1;
+        let target = currentPage + dir;
+        if (target >= 1 && target <= maxPage) {
+            currentPage = target;
+            renderTable();
+        }
+    }
+
+    setInterval(updateClock, 1000);
+    </script>
+</body>
+</html>
