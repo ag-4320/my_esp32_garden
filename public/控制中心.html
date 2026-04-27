@@ -33,10 +33,9 @@
             transition: all 0.2s ease; 
             position: relative;
             overflow: hidden;
-            box-shadow: 0 6px 0 rgba(0,0,0,0.2); /* 底部厚度感 */
+            box-shadow: 0 6px 0 rgba(0,0,0,0.2);
         }
 
-        /* 強制開啟按鈕 - 科技綠 */
         .btn-on { 
             background: linear-gradient(145deg, #43a047, #2e7d32);
             color: white; 
@@ -48,7 +47,6 @@
             transform: translateY(-2px);
         }
 
-        /* 緊急停止按鈕 - 警告紅 */
         .btn-off { 
             background: linear-gradient(145deg, #d32f2f, #b71c1c);
             color: white; 
@@ -60,7 +58,6 @@
             transform: translateY(-2px);
         }
 
-        /* 按下時的反饋 */
         button:active:not(:disabled) {
             transform: translateY(3px);
             box-shadow: 0 2px 0 rgba(0,0,0,0.2);
@@ -72,6 +69,40 @@
             cursor: not-allowed; 
             box-shadow: none; 
             transform: none;
+        }
+
+        /* --- 輸入框視覺優化 (新增) --- */
+        .input-row {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            color: #00d4ff;
+            font-weight: bold;
+        }
+
+        input[type="text"], input[type="number"] {
+            background: rgba(0, 0, 0, 0.5); 
+            border: 1px solid rgba(0, 212, 255, 0.4); 
+            border-radius: 8px;
+            padding: 10px;
+            color: #fff;
+            font-family: 'Consolas', 'Courier New', monospace;
+            text-align: center;
+            outline: none;
+            transition: all 0.3s ease;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
+        }
+
+        input:focus {
+            border-color: #00ff88;
+            box-shadow: 0 0 12px rgba(0, 255, 136, 0.3);
+        }
+
+        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
         }
 
         /* --- 表格與日誌優化 --- */
@@ -124,7 +155,7 @@
             <span class="label">系統即時時間</span>
             <div id="clock" class="time-text">00:00:00</div>
             <div class="value-display">
-                <span id="time-status" style="font-weight: bold; color: #00ff88;">● 系統營運中</span>
+                <span id="time-status" style="font-weight: bold; color: #00ff88;">● 系統狀態檢查中</span>
             </div>
         </div>
     
@@ -181,6 +212,10 @@
             password: 'Jason5238137'
         });
 
+        // 營運時段設定
+        const START_HOUR = 7;
+        const END_HOUR = 18;
+
         let historyLogs = []; 
         let currentPage = 1;
         let lastDataTime = 0;
@@ -218,26 +253,47 @@
 
         function updateClock() {
             const now = new Date();
+            const currentHour = now.getHours();
             document.getElementById('clock').innerText = now.toLocaleTimeString('zh-TW', { hour12: false });
+            
             const isOnline = (Date.now() - lastDataTime < 15000); 
             const statusTag = document.getElementById('status');
             const onBtn = document.getElementById('onBtn');
+            const timeStatus = document.getElementById('time-status');
+
+            // --- 新增：時段鎖定判斷 ---
+            const isInTime = (currentHour >= START_HOUR && currentHour < END_HOUR);
+
+            if (!isInTime) {
+                timeStatus.innerText = "● 非營運時段 (07:00-18:00)";
+                timeStatus.style.color = "#ffae00"; 
+                onBtn.disabled = true;
+                onBtn.innerText = "非開放時段";
+            } else {
+                timeStatus.innerText = "● 系統營運中";
+                timeStatus.style.color = "#00ff88";
+                onBtn.innerText = "強制開啟水閥";
+                
+                // 只有在線且不在運作中時才啟用
+                if (isOnline && !isOperating) {
+                    onBtn.disabled = false;
+                } else {
+                    onBtn.disabled = true;
+                }
+            }
 
             if (!isOnline) {
                 statusTag.innerText = "● 硬體通訊離線";
                 statusTag.style.color = "#ff4d4d";
-                onBtn.disabled = true;
             } else {
                 statusTag.innerText = "● 硬體通訊正常";
                 statusTag.style.color = "#00ff88";
-                if (!isOperating) onBtn.disabled = false;
             }
         }
 
         function ctl(cmd) {
             const user = document.getElementById('userName').value.trim();
             const sec = parseInt(document.getElementById('duration').value) || 10;
-            
             if (cmd === 'on' && !user) { alert("請輸入操作員姓名以便記錄！"); return; }
             
             if (client.connected) {
