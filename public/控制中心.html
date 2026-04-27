@@ -155,7 +155,6 @@
     let isCoolingDown = false;
     let countdownTimer = null; 
 
-    // 1. 強化的初始化邏輯
     window.onload = function() {
         const savedLogs = localStorage.getItem('garden_history');
         try {
@@ -169,8 +168,11 @@
 
     client.on('connect', () => console.log("MQTT 連線成功"));
 
+    // 監聽 ESP32 發回來的數據 (判斷是否在線)
+    client.subscribe('esp32/garden/all'); 
+
     client.on('message', (topic, message) => {
-        lastDataTime = Date.now();
+        lastDataTime = Date.now(); // 只要有訊息進來就更新最後連線時間
         if (topic === 'esp32/garden/logs') {
             try {
                 const data = JSON.parse(message.toString());
@@ -179,22 +181,23 @@
         }
     });
 
-    // 2. 穩定的新增邏輯
     function addLog(data) {
-        if (!Array.isArray(historyLogs)) historyLogs = []; // 二次防護
+        if (!Array.isArray(historyLogs)) historyLogs = [];
         historyLogs.unshift(data);
         if (historyLogs.length > 50) historyLogs.pop();
         localStorage.setItem('garden_history', JSON.stringify(historyLogs));
         renderTable();
     }
 
+    // ================================================================
+    // 🔧 已修改：不受時間限制的時鐘與狀態更新
+    // ================================================================
     function updateClock() {
         const now = new Date();
-        const h = now.getHours();
         document.getElementById('clock').innerText = now.toLocaleTimeString('zh-TW', { hour12: false });
 
+        // 判斷硬體是否在線 (12秒內有收到資料就算在線)
         const isOnline = (Date.now() - lastDataTime < 12000);
-        const isAllowed = (h >= 7 && h < 20);
         
         const statusTag = document.getElementById('status');
         const onBtn = document.getElementById('onBtn');
@@ -204,13 +207,17 @@
             statusTag.innerText = "○ 硬體離線 (未接收到數據)";
             statusTag.className = "status-tag offline";
             onBtn.disabled = true;
+            timeStatus.innerText = "等待 ESP32 連線中...";
+            timeStatus.style.color = "#c62828";
         } else {
             statusTag.innerText = "● 硬體在線 (數據傳輸正常)";
             statusTag.className = "status-tag online";
+            
+            // 測試模式邏輯：只要在線且不在冷卻中，永遠允許開啟
             if (!isCoolingDown) {
-                onBtn.disabled = !isAllowed;
-                timeStatus.innerText = isAllowed ? "● 系統營運中" : "○ 非操作時段";
-                timeStatus.style.color = isAllowed ? "#2e7d32" : "#c62828";
+                onBtn.disabled = false; 
+                timeStatus.innerText = "● 測試模式：全天候操作允許";
+                timeStatus.style.color = "#2e7d32";
             }
         }
     }
@@ -251,7 +258,6 @@
                 }, 1000);
             } else {
                 stopWatering();
-                document.getElementById('action-status').innerText = "已強制停止";
             }
         } else {
             alert("MQTT 斷線中");
@@ -270,7 +276,7 @@
 
     function renderTable() {
         const body = document.getElementById('log-body');
-        if (!Array.isArray(historyLogs)) return; // 確保不噴錯
+        if (!Array.isArray(historyLogs)) return;
 
         const start = (currentPage - 1) * 10;
         const displayData = historyLogs.slice(start, start + 10);
