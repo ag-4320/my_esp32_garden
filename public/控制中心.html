@@ -71,7 +71,7 @@
             transform: none;
         }
 
-        /* --- 輸入框視覺優化 (新增) --- */
+        /* --- 輸入框視覺優化 --- */
         .input-row {
             margin-bottom: 15px;
             display: flex;
@@ -98,6 +98,14 @@
         input:focus {
             border-color: #00ff88;
             box-shadow: 0 0 12px rgba(0, 255, 136, 0.3);
+        }
+
+        input:disabled {
+            background: rgba(50, 50, 50, 0.3);
+            border-color: rgba(255, 255, 255, 0.1);
+            color: #666;
+            cursor: not-allowed;
+            box-shadow: none;
         }
 
         input::-webkit-outer-spin-button, input::-webkit-inner-spin-button {
@@ -168,7 +176,7 @@
                 </div>
                 <div class="input-row">
                     <span>持續時間:</span>
-                    <input type="number" id="duration" value="10" min="1" max="60" style="width: 80px;"> 秒
+                    <input type="number" id="duration" value="10" min="1" max="60" style="width: 80px;" disabled> 秒
                 </div>
             </div>
             <div class="btn-group">
@@ -176,6 +184,21 @@
                 <button id="offBtn" onclick="ctl('off')" class="btn-off">緊急停止系統</button>
             </div>
             <div id="action-status" style="margin-top: 12px; font-size: 0.95rem; color: #00d4ff; font-weight: bold;">系統待命</div>
+        </div>
+
+        <div class="box">
+            <span class="label">允許灑水時段設定</span>
+            <div id="time-settings-ui">
+                <div class="input-row">
+                    <span>開始小時:</span>
+                    <input type="number" id="startHourInput" value="7" min="0" max="23" style="width: 80px;"> 時
+                </div>
+                <div class="input-row">
+                    <span>結束小時:</span>
+                    <input type="number" id="endHourInput" value="21" min="0" max="23" style="width: 80px;"> 時
+                </div>
+            </div>
+            <div style="margin-top: 12px; font-size: 0.95rem; color: #00d4ff; font-weight: bold;">設定即時生效</div>
         </div>
 
         <div class="box">
@@ -212,9 +235,9 @@
             password: 'Jason5238137'
         });
 
-        // 營運時段設定
-        const START_HOUR = 7;
-        const END_HOUR = 21;
+        // 營運時段設定 (將 const 改為 let 以便動態修改)
+        let START_HOUR = 7;
+        let END_HOUR = 21;
 
         let historyLogs = []; 
         let currentPage = 1;
@@ -226,6 +249,58 @@
             const saved = localStorage.getItem('garden_history');
             if(saved) historyLogs = JSON.parse(saved);
             renderTable();
+
+            // --- 新增：核心輸入欄位連動與數值防呆邏輯 ---
+            const userNameInput = document.getElementById('userName');
+            const durationInput = document.getElementById('duration');
+            const startHourInput = document.getElementById('startHourInput');
+            const endHourInput = document.getElementById('endHourInput');
+
+            // 1. 姓名輸入檢查：無姓名則鎖定持續時間
+            userNameInput.addEventListener('input', () => {
+                if (!userNameInput.value.trim()) {
+                    durationInput.disabled = true;
+                    durationInput.value = 10; // 清空或還原成預設值
+                } else {
+                    durationInput.disabled = false;
+                }
+            });
+
+            // 2. 持續時間大小限制 (1 ~ 60)
+            durationInput.addEventListener('input', () => {
+                let val = parseInt(durationInput.value);
+                if (val > 60) durationInput.value = 60;
+            });
+            durationInput.addEventListener('change', () => {
+                let val = parseInt(durationInput.value);
+                if (isNaN(val) || val < 1) durationInput.value = 1;
+                if (val > 60) durationInput.value = 60;
+            });
+
+            // 3. 營運時段數值限制與變數動態更新 (0 ~ 23)
+            function enforceHourLimits(inputEl, isStart) {
+                let val = parseInt(inputEl.value);
+                if (val > 23) inputEl.value = 23;
+                if (!isNaN(val)) {
+                    if (val < 0) val = 0;
+                    if (val > 23) val = 23;
+                    if (isStart) START_HOUR = val;
+                    else END_HOUR = val;
+                }
+            }
+            function finalHourCheck(inputEl, isStart) {
+                let val = parseInt(inputEl.value);
+                if (isNaN(val) || val < 0) val = 0;
+                if (val > 23) val = 23;
+                inputEl.value = val;
+                if (isStart) START_HOUR = val;
+                else END_HOUR = val;
+            }
+
+            startHourInput.addEventListener('input', () => enforceHourLimits(startHourInput, true));
+            startHourInput.addEventListener('change', () => finalHourCheck(startHourInput, true));
+            endHourInput.addEventListener('input', () => enforceHourLimits(endHourInput, false));
+            endHourInput.addEventListener('change', () => finalHourCheck(endHourInput, false));
         };
 
         client.on('connect', () => {
@@ -261,11 +336,11 @@
             const onBtn = document.getElementById('onBtn');
             const timeStatus = document.getElementById('time-status');
 
-            // --- 新增：時段鎖定判斷 ---
+            // --- 時段鎖定判斷 ---
             const isInTime = (currentHour >= START_HOUR && currentHour < END_HOUR);
 
             if (!isInTime) {
-                timeStatus.innerText = "● 非營運時段 (07:00-21:00)";
+                timeStatus.innerText = `● 非營運時段 (${String(START_HOUR).padStart(2,'0')}:00-${String(END_HOUR).padStart(2,'0')}:00)`;
                 timeStatus.style.color = "#ffae00"; 
                 onBtn.disabled = true;
                 onBtn.innerText = "非開放時段";
