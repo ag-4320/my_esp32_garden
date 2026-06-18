@@ -336,8 +336,10 @@
             const onBtn = document.getElementById('onBtn');
             const timeStatus = document.getElementById('time-status');
 
-            // --- 時段鎖定判斷 ---
-            const isInTime = (currentHour >= START_HOUR && currentHour < END_HOUR);
+            // --- 修改後的時段鎖定判斷：支援跨夜時段邏輯 (例如 23 到 5) ---
+            const isInTime = START_HOUR <= END_HOUR 
+                ? (currentHour >= START_HOUR && currentHour < END_HOUR)
+                : (currentHour >= START_HOUR || currentHour < END_HOUR);
 
             if (!isInTime) {
                 timeStatus.innerText = `● 非營運時段 (${String(START_HOUR).padStart(2,'0')}:00-${String(END_HOUR).padStart(2,'0')}:00)`;
