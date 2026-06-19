@@ -204,7 +204,7 @@
         <div class="box">
             <span class="label">硬體即時狀態回傳</span>
             <div id="v-state" style="font-size: 2.8rem; font-weight: 900; color: #ff4d4d; transition: 0.5s;">關閉中</div>
-            <div id="v-source" style="font-size: 0.9rem; color: #aaa; margin-top: 5px;">目前來源：自動監測模式</div>
+            <div id="v-source" style="font-size: 0.9rem; color: #aaa; margin-top: 5px;">目前來源：系統待命</div>
             <div style="font-size: 3rem; color: #00d4ff; font-weight: 800; margin-top: 10px;"><span id="timer-left">0</span>s</div>
         </div>
 
@@ -308,7 +308,7 @@
         });
 
         // ==========================================
-        // 核心修改：動態解析硬體狀態、來源、與真實秒數倒數
+        // 核心整合：擷取首次有效秒數，後續由網頁本地平滑倒數
         // ==========================================
         client.on('message', (topic, message) => {
             if (topic === 'esp32/garden/all') {
@@ -325,25 +325,39 @@
                         vState.style.color = "#00ff88";
                         vState.style.textShadow = "0 0 15px rgba(0, 255, 136, 0.5)";
                         
-                        // 1. 解析並顯示由硬體打包回傳的控制來源
-                        if (data.src) {
-                            let sourceText = data.src;
-                            if (sourceText === "Remote Control") sourceText = "網站遠端手動控制";
-                            if (sourceText === "Auto Mode") sourceText = "系統自動加權判定";
-                            vSource.innerText = "目前來源：" + sourceText;
-                        }
+                        // 解析並顯示控制來源
+                        let sourceText = data.src || "未知來源";
+                        if (sourceText === "Remote Control") sourceText = "網站遠端手動控制";
+                        if (sourceText === "Auto Mode") sourceText = "系統自動加權判定";
+                        vSource.innerText = "目前來源：" + sourceText;
 
-                        // 2. 直接同步顯示 ESP32 內部計時器真實的剩餘秒數
-                        if (data.sec !== undefined) {
-                            timerLeft.innerText = data.sec;
-                        }
+                        // 💡 核心優化點 💡
+                        // 只有當網頁目前「不在」運作倒數狀態時，才擷取硬體傳來的初次秒數，並交由網頁接管倒數
+                        if (!isOperating && data.sec !== undefined && data.sec > 0) {
+                            isOperating = true; 
+                            document.getElementById('onBtn').disabled = true;
+                            document.getElementById('action-status').innerText = "指令已下達 - 運作中";
 
-                        // 強制清除網頁端本機端可能存在衝突的模擬計時器，以硬體回傳數據為主
-                        if(countdownTimer) clearInterval(countdownTimer);
+                            let count = data.sec;
+                            timerLeft.innerText = count;
+
+                            if (countdownTimer) clearInterval(countdownTimer);
+                            countdownTimer = setInterval(() => {
+                                count--;
+                                timerLeft.innerText = Math.max(count, 0);
+                                if (count <= 0) {
+                                    stopWatering(); // 本地時間到，自動切回待命，解鎖接收下一次任務秒數
+                                }
+                            }, 1000);
+                        }
 
                     } else {
                         // 【水閥關閉狀態】
-                        if (!isOperating) { 
+                        // 如果硬體目前是關閉的，但網頁端卻還在倒數 (例如現場人員手動切斷、或按下緊急停止)
+                        // 則強制終止網頁計時，兩端同步
+                        if (isOperating) {
+                            stopWatering();
+                        } else {
                             vState.innerText = "關閉中";
                             vState.style.color = "#ff4d4d";
                             vState.style.textShadow = "none";
@@ -448,7 +462,7 @@
             isOperating = false;
             document.getElementById('v-state').innerText = "關閉中";
             document.getElementById('v-state').style.color = "#ff4d4d";
-            document.getElementById('v-source').innerText = "目前來源：自動監測模式";
+            document.getElementById('v-source').innerText = "目前來源：系統待命";
             document.getElementById('timer-left').innerText = "0";
             document.getElementById('action-status').innerText = "系統待命";
             updateClock();
