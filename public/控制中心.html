@@ -136,6 +136,7 @@
 
         .badge { padding: 5px 12px; border-radius: 20px; color: white; font-size: 0.8rem; font-weight: bold; }
         .bg-manual { background: #2e7d32; box-shadow: 0 0 10px rgba(46, 125, 50, 0.5); }
+        .bg-auto { background: #0288d1; box-shadow: 0 0 10px rgba(2, 136, 209, 0.5); } /* 新增：ESP32自動觸發的藍色標籤 */
         .bg-stop { background: #c62828; box-shadow: 0 0 10px rgba(198, 40, 40, 0.5); }
     </style>
 </head>
@@ -338,6 +339,16 @@
                             document.getElementById('onBtn').disabled = true;
                             document.getElementById('action-status').innerText = "指令已下達 - 運作中";
 
+                            // 📝 新增：硬體自主觸發時，自動將紀錄寫入表格 (名稱為 esp32)
+                            const nowTime = new Date().toLocaleTimeString('zh-TW', { hour12: false });
+                            addLog({ 
+                                time: nowTime, 
+                                user: "esp32", 
+                                info: data.sec + " 秒", 
+                                status: "自動開啟", 
+                                type: "auto" 
+                            });
+
                             let count = data.sec;
                             timerLeft.innerText = count;
 
@@ -353,8 +364,6 @@
 
                     } else {
                         // 【水閥關閉狀態】
-                        // 如果硬體目前是關閉的，但網頁端卻還在倒數 (例如現場人員手動切斷、或按下緊急停止)
-                        // 則強制終止網頁計時，兩端同步
                         if (isOperating) {
                             stopWatering();
                         } else {
