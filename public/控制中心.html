@@ -21,7 +21,7 @@
 
         /* --- 按鈕視覺升級 (精品控制感) --- */
         .btn-group { display: flex; gap: 20px; margin-top: 15px; width: 100%; justify-content: center; }
-        
+         
         button { 
             padding: 12px 30px; 
             border: none; 
@@ -235,7 +235,7 @@
             password: 'Jason5238137'
         });
 
-        // 營運時段設定 (將 const 改為 let 以便動態修改)
+        // 營運時段設定
         let START_HOUR = 7;
         let END_HOUR = 21;
 
@@ -250,7 +250,7 @@
             if(saved) historyLogs = JSON.parse(saved);
             renderTable();
 
-            // --- 新增：核心輸入欄位連動與數值防呆邏輯 ---
+            // --- 核心輸入欄位連動與數值防呆邏輯 ---
             const userNameInput = document.getElementById('userName');
             const durationInput = document.getElementById('duration');
             const startHourInput = document.getElementById('startHourInput');
@@ -260,7 +260,7 @@
             userNameInput.addEventListener('input', () => {
                 if (!userNameInput.value.trim()) {
                     durationInput.disabled = true;
-                    durationInput.value = 10; // 清空或還原成預設值
+                    durationInput.value = 10; 
                 } else {
                     durationInput.disabled = false;
                 }
@@ -307,22 +307,57 @@
             client.subscribe('esp32/garden/all'); 
         });
 
+        // ==========================================
+        // 核心修改：動態解析硬體狀態、來源、與真實秒數倒數
+        // ==========================================
         client.on('message', (topic, message) => {
             if (topic === 'esp32/garden/all') {
                 lastDataTime = Date.now();
                 try {
                     const data = JSON.parse(message.toString());
                     const vState = document.getElementById('v-state');
+                    const vSource = document.getElementById('v-source');
+                    const timerLeft = document.getElementById('timer-left');
+
                     if (data.v === 1) {
+                        // 【水閥開啟狀態】
                         vState.innerText = "開啟中";
                         vState.style.color = "#00ff88";
                         vState.style.textShadow = "0 0 15px rgba(0, 255, 136, 0.5)";
-                    } else if (!isOperating) {
-                        vState.innerText = "關閉中";
-                        vState.style.color = "#ff4d4d";
-                        vState.style.textShadow = "none";
+                        
+                        // 1. 解析並顯示由硬體打包回傳的控制來源
+                        if (data.src) {
+                            let sourceText = data.src;
+                            if (sourceText === "Remote Control") sourceText = "網站遠端手動控制";
+                            if (sourceText === "Auto Mode") sourceText = "系統自動加權判定";
+                            vSource.innerText = "目前來源：" + sourceText;
+                        }
+
+                        // 2. 直接同步顯示 ESP32 內部計時器真實的剩餘秒數
+                        if (data.sec !== undefined) {
+                            timerLeft.innerText = data.sec;
+                        }
+
+                        // 強制清除網頁端本機端可能存在衝突的模擬計時器，以硬體回傳數據為主
+                        if(countdownTimer) clearInterval(countdownTimer);
+
+                    } else {
+                        // 【水閥關閉狀態】
+                        if (!isOperating) { 
+                            vState.innerText = "關閉中";
+                            vState.style.color = "#ff4d4d";
+                            vState.style.textShadow = "none";
+                            
+                            vSource.innerText = "目前來源：系統待命";
+                            timerLeft.innerText = "0";
+                            
+                            document.getElementById('onBtn').disabled = false;
+                            document.getElementById('action-status').innerText = "系統待命";
+                        }
                     }
-                } catch(e) {}
+                } catch(e) {
+                    console.error("JSON 解析錯誤: ", e);
+                }
             }
         });
 
@@ -336,7 +371,6 @@
             const onBtn = document.getElementById('onBtn');
             const timeStatus = document.getElementById('time-status');
 
-            // --- 修改後的時段鎖定判斷：支援跨夜時段邏輯 (例如 23 到 5) ---
             const isInTime = START_HOUR <= END_HOUR 
                 ? (currentHour >= START_HOUR && currentHour < END_HOUR)
                 : (currentHour >= START_HOUR || currentHour < END_HOUR);
@@ -351,7 +385,6 @@
                 timeStatus.style.color = "#00ff88";
                 onBtn.innerText = "強制開啟水閥";
                 
-                // 只有在線且不在運作中時才啟用
                 if (isOnline && !isOperating) {
                     onBtn.disabled = false;
                 } else {
