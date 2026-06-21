@@ -211,8 +211,12 @@
                 
                 // 數據配對與更新
                 if(res.soil != null) {
-                    document.getElementById('home-moisture').innerText = res.soil;
-                    pushData(charts.soil, res.soil, 'soil');
+                    // 將數值反轉 (100 - 原始數值)，並確保不超出 0~100 的範圍
+                    let invertedSoil = 100 - parseFloat(res.soil);
+                    invertedSoil = Math.max(0, Math.min(100, invertedSoil));
+                    
+                    document.getElementById('home-moisture').innerText = invertedSoil.toFixed(1);
+                    pushData(charts.soil, invertedSoil, 'soil');
                 }
                 if(res.t != null) {
                     document.getElementById('home-temp').innerText = res.t;
